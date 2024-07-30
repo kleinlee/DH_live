@@ -1,6 +1,7 @@
 # Real-time Live Streaming Digital Human
 # 实时直播数字人
-
+### Video Example
+<iframe src="video_data/demo.mp4" width="1024" height="1024" frameborder="0" allowfullscreen></iframe>
 ## Overview / 概述
 This project is a real-time live streaming digital human powered by few-shot learning. It is designed to run smoothly on all 30 and 40 series graphics cards, ensuring a seamless and interactive live streaming experience.
 
