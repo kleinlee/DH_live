@@ -41,7 +41,7 @@ python demo_avatar.py
 We would like to thank the contributors of [wavlip](https://github.com/Rudrabha/Wav2Lip), [dinet](https://github.com/MRzzm/DINet), [livespeechportrait](https://github.com/YuanxunLu/LiveSpeechPortraits) repositories, for their open research and contributions.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Contact
 For any questions or suggestions, please contact us at [kleinlee1@outlook.com].
