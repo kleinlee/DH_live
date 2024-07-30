@@ -1,40 +1,47 @@
 # Real-time Live Streaming Digital Human
 # 实时直播数字人
 ### Video Example
-<iframe src="video_data/demo.mp4" width="1024" height="1024" frameborder="0" allowfullscreen></iframe>
-## Overview / 概述
+
+
+https://github.com/user-attachments/assets/7e0b5bc2-067b-4048-9f88-961afed12478
+
+
+## Overview
 This project is a real-time live streaming digital human powered by few-shot learning. It is designed to run smoothly on all 30 and 40 series graphics cards, ensuring a seamless and interactive live streaming experience.
 
-### Key Features / 特点
-- **Real-time Performance** / **实时性能**: The digital human can interact in real-time with the audience.
-- **Few-shot Learning** / **少样本学习**: The system is capable of learning from a few examples to generate realistic responses.
-- **GPU Compatibility** / **显卡兼容性**: Optimized for NVIDIA 30 and 40 series GPUs for high performance.
+### Key Features
+- **Real-time Performance**: The digital human can interact in real-time with 25+ fps for common NVIDIA 30 and 40 series GPUs
+- **Few-shot Learning**: The system is capable of learning from a few examples to generate realistic responses.
+## Usage
 
-## Getting Started / 开始使用
-To get started with the project, follow these steps:
+### Unzip the Model File
+First, navigate to the `checkpoint` directory and unzip the model file:
+```bash
+cd checkpoint
+gzip -d -c render.pth.gz.001 > render.pth
+```
+### Prepare Your Video
+Next, prepare your video using the data_preparation script. Replace YOUR_VIDEO_PATH with the path to your video:
+```bash
+python data_preparation YOUR_VIDEO_PATH
+```
+The result (video_info) will be stored in the ./video_data directory.
+### Run with Audio File
+Run the demo script with an audio file. Make sure the audio file is in .wav format with a sample rate of 16kHz and 16-bit single channel. Replace video_data/test with the path to your video_info file, video_data/audio0.wav with the path to your audio file, and 1.mp4 with the desired output video path:
+```bash
+python demo.py video_data/test video_data/audio0.wav 1.mp4
+```
+### Real-Time Run with Microphone
+For real-time operation using a microphone, simply run the following command:
+```bash
+python demo_avatar.py
+```
 
-1. **Clone the Repository** / **克隆仓库**:
-git clone https://github.com/yourusername/yourproject.git
-2. **Install Dependencies** / **安装依赖**:
-pip install -r requirements.txt
-3. **Run the Application** / **运行应用程序**:
-python main.py
+## Acknowledgements 
+We would like to thank the contributors of [wavlip](https://github.com/Rudrabha/Wav2Lip), [dinet](https://github.com/MRzzm/DINet), [livespeechportrait](https://github.com/YuanxunLu/LiveSpeechPortraits) repositories, for their open research and contributions.
 
-## Usage / 使用方法
-- Launch the application and configure the settings for your live stream.
-- Start the live stream and watch the digital human interact with your audience.
-
-## Contributing / 贡献指南
-We welcome contributions to our project. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
-
-## License / 许可证
+## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Contact / 联系方式
-For any questions or suggestions, please contact us at [your-email@example.com](mailto:your-email@example.com).
-
----
-
-Please replace `https://github.com/yourusername/yourproject.git` with the actual URL of your GitHub repository, and ensure that you have a `requirements.txt` file listing all the necessary dependencies for your project. Adjust the `python main.py` command according to the entry point of your application.
-
-This README template provides a starting point, and you can add more sections as needed, such as detailed documentation, roadmap, acknowledgments, etc.
+## Contact
+For any questions or suggestions, please contact us at [kleinlee1@outlook.com].
