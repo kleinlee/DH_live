@@ -11,14 +11,16 @@ from talkingface.render_model import RenderModel
 
 def main():
     # 检查命令行参数的数量
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         print("Usage: python demo.py <video_path> <output_video_name>")
         sys.exit(1)  # 参数数量不正确时退出程序
 
     # 获取video_name参数
     video_path = sys.argv[1]
     print(f"Video path is set to: {video_path}")
-    output_video_name = sys.argv[2]
+    audio_path = sys.argv[2]
+    print(f"Audio path is set to: {audio_path}")
+    output_video_name = sys.argv[3]
     print(f"output video name is set to: {output_video_name}")
 
     audioModel = AudioModel()
@@ -26,11 +28,12 @@ def main():
 
     renderModel = RenderModel()
     renderModel.loadModel("checkpoint/render.pth")
-    pkl_path = "video_data/{}/keypoint_rotate.pkl".format(video_path)
-    video_path = "video_data/{}/circle.mp4".format(video_path)
+    pkl_path = "{}/keypoint_rotate.pkl".format(video_path)
+    video_path = "{}/circle.mp4".format(video_path)
     renderModel.reset_charactor(video_path, pkl_path)
 
-    wavpath = "video_data/audio0.wav"
+    # wavpath = "video_data/audio0.wav"
+    wavpath = audio_path
     mouth_frame = audioModel.interface_wav(wavpath)
     cap_input = cv2.VideoCapture(video_path)
     vid_width = cap_input.get(cv2.CAP_PROP_FRAME_WIDTH)  # 宽度
