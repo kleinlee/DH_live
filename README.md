@@ -20,7 +20,19 @@ First, navigate to the `checkpoint` directory and unzip the model file:
 cd checkpoint
 gzip -d -c render.pth.gz.001 > render.pth
 ```
+### Install
+
+```
+CUDA:
+pip install -r requirements.txt
+MacOs-MPS or Only CPU:
+pip install -r requirements_mps_cpu.txt
+```
+
+
+
 ### Prepare Your Video
+
 Next, prepare your video using the data_preparation script. Replace YOUR_VIDEO_PATH with the path to your video:
 ```bash
 python data_preparation YOUR_VIDEO_PATH

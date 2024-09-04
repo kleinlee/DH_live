@@ -6,23 +6,25 @@ import cv2
 import numpy as np
 from torch.nn import BatchNorm2d
 from torch.nn import BatchNorm1d
+from talkingface.utils import device
 
-def make_coordinate_grid_3d(spatial_size, type):
+def make_coordinate_grid_3d(spatial_size, tensor_type):
     '''
         generate 3D coordinate grid
     '''
     d, h, w = spatial_size
-    x = torch.arange(w).type(type)
-    y = torch.arange(h).type(type)
-    z = torch.arange(d).type(type)
+    dtype = torch.float
+    x = torch.arange(w, dtype=dtype).to(device)
+    y = torch.arange(h, dtype=dtype).to(device)
+    z = torch.arange(d, dtype=dtype).to(device)
     x = (2 * (x / (w - 1)) - 1)
     y = (2 * (y / (h - 1)) - 1)
     z = (2 * (z / (d - 1)) - 1)
-    yy = y.view(1,-1, 1).repeat(d,1, w)
-    xx = x.view(1,1, -1).repeat(d,h, 1)
-    zz = z.view(-1,1,1).repeat(1,h,w)
-    meshed = torch.cat([xx.unsqueeze_(3), yy.unsqueeze_(3)], 3)
-    return meshed,zz
+    yy = y.view(1, -1, 1).repeat(d, 1, w)
+    xx = x.view(1, 1, -1).repeat(d, h, 1)
+    zz = z.view(-1, 1, 1).repeat(1, h, w)
+    meshed = torch.cat([xx.unsqueeze(3), yy.unsqueeze(3)], 3)
+    return meshed, zz
 
 class ResBlock1d(nn.Module):
     '''

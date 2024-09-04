@@ -5,7 +5,8 @@ from scipy.io import wavfile
 import torch
 import librosa
 import pickle
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+from talkingface.utils import device
 import pickle
 import os
 def pca_process(x):
@@ -44,7 +45,7 @@ class AudioModel:
         #     Audio2FeatureModel.eval()
         from talkingface.models.audio2bs_lstm import Audio2Feature
         self.__net = Audio2Feature()  # 调用模型Model
-        self.__net.load_state_dict(torch.load(ckpt_path))
+        self.__net.load_state_dict(torch.load(ckpt_path, map_location=torch.device(device)))
         self.__net = self.__net.to(device)
         self.__net.eval()
 
