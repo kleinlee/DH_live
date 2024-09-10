@@ -54,7 +54,7 @@ def main():
     videoWriter.release()
     val_video = "../output/{}.mp4".format(task_id)
     os.system(
-        "ffmpeg -i {} -i {} -c:v libx264 -pix_fmt yuv420p -loglevel quiet {}".format(save_path, wavpath, output_video_name))
+        "ffmpeg -i {} -i {} -c:v copy -pix_fmt yuv420p -loglevel quiet {}".format(save_path, wavpath, output_video_name))
     shutil.rmtree("output/{}".format(task_id))
 
 
