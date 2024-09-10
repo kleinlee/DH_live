@@ -3,7 +3,6 @@ import numpy as np
 import kaldi_native_fbank as knf
 from scipy.io import wavfile
 import torch
-import librosa
 import pickle
 device = "cuda" if torch.cuda.is_available() else "cpu"
 import pickle

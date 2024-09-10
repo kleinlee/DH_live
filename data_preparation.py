@@ -158,7 +158,7 @@ def CirculateVideo(video_in_path, video_out_path, export_imgs = False):
 
     ffmpeg_cmd = "ffmpeg -i {} -vf reverse -y {}".format(front_video_path, back_video_path)
     os.system(ffmpeg_cmd)
-    ffmpeg_cmd = "ffmpeg -f concat -i {} -c:v copy -y {}".format("data/video_concat.txt", video_out_path)
+    ffmpeg_cmd = "ffmpeg -f concat -i {} -c:v copy -y {}".format("video_concat.txt", video_out_path)
     os.system(ffmpeg_cmd)
     # exit()
     print("正向视频帧数：", frames)
