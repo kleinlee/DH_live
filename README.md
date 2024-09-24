@@ -1,5 +1,8 @@
 # Real-time Live Streaming Digital Human
 # 实时直播数字人  [bilibili video](https://www.bilibili.com/video/BV1Ppv1eEEgj/?vd_source=53601feee498369e726af7dbc2dae349)
+### News
+## Training
+Details on the render model training can be found [here](https://github.com/kleinlee/DH_live/tree/master/train).
 ### Video Example
 
 
@@ -42,7 +45,7 @@ python demo_avatar.py
 ```
 
 ## Acknowledgements 
-We would like to thank the contributors of [wavlip](https://github.com/Rudrabha/Wav2Lip), [dinet](https://github.com/MRzzm/DINet), [livespeechportrait](https://github.com/YuanxunLu/LiveSpeechPortraits) repositories, for their open research and contributions.
+We would like to thank the contributors of [Wav2Lip](https://github.com/Rudrabha/Wav2Lip), [DINet](https://github.com/MRzzm/DINet), [LiveSpeechPortrait](https://github.com/YuanxunLu/LiveSpeechPortraits) repositories, for their open research and contributions.
 
 ## License
 This project is licensed under the MIT License.

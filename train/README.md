@@ -41,7 +41,13 @@ python train/train_input_validation_render_model.py dir_to_data
 ```
 you will get the following image:
 ![](validation.jpg)
-### train
+### Training 
 ```bash
 python train/train_render_model.py dir_to_data
 ```
+### Monitoring Training Progress
+Monitor the training progress using TensorBoard.
+```bash
+tensorboard --logdir=checkpoint/Dinet_five_ref
+```
+Then, open http://localhost:6006/ in your web browser to view the training metrics.
