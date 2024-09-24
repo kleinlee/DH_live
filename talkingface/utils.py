@@ -87,7 +87,7 @@ def draw_face_feature_maps(keypoints, mode = ["mouth", "nose", "eye", "oval"], s
                           int(keypoints[INDEX_NOSE_EDGE[5], 1] + mouth_height / 4),
                           int(keypoints[INDEX_NOSE_EDGE[5], 1] + mouth_height / 4 + mouth_height))
         w0, h0 = max(0, w0), max(h0, 0)
-        print(w0, w1, h0, h1)
+        # print(w0, w1, h0, h1)
         mouth_mask = np.zeros((h, w, 3), np.uint8)  # edge map for all edges
         mouth_mask[h0:h1, w0:w1] = 255
         mouth_index = np.where(mouth_mask == 255)
@@ -99,7 +99,7 @@ def draw_face_feature_maps(keypoints, mode = ["mouth", "nose", "eye", "oval"], s
         max_, min_ = random.randint(mean_ + 40, mean_ + 70), random.randint(mean_ - 70, mean_ - 40)
         img_mouth = (img_mouth.astype(np.float32) - min_) / (max_ - min_) * 255.
         img_mouth = img_mouth.clip(0, 255).astype(np.uint8)
-        print(img_mouth.shape[0], img_mouth.shape[1])
+        # print(img_mouth.shape[0], img_mouth.shape[1])
         img_mouth = cv2.resize(img_mouth, (100, 50))
 
         # 定义噪声的标准差

@@ -196,7 +196,7 @@ def data_preparation(train_video_list):
             images_info = pickle.load(f)
         keypoints_all.append(images_info[:, main_keypoints_index, :2])
 
-        Path_output_pkl = "{}/face_mat_mask20240722.pkl".format(model_name)
+        Path_output_pkl = "{}/face_mat_mask.pkl".format(model_name)
         with open(Path_output_pkl, "rb") as f:
             mat_list, face_pts_mean_personal = pickle.load(f)
 
