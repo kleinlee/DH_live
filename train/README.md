@@ -7,9 +7,9 @@ The audio model is distilled from other models and is designed to extract mouth 
 Please ensure that your data directory structure is organized as follows:
 ```bash
 |--/dir_to_data
+|  |--/video0.mp4
 |  |--/video1.mp4
 |  |--/video2.mp4
-|  |--/video3.mp4
 ```
 ### Data Preparation
 Next, prepare your video using the data_preparation script. Replace YOUR_VIDEO_PATH with the path to your video:
