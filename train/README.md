@@ -43,7 +43,7 @@ you will get the following image:
 ![](validation.jpg)
 ### Training 
 ```bash
-python train/train_render_model.py dir_to_data
+python train/train_render_model.py ----train_data dir_to_data
 ```
 ### Monitoring Training Progress
 Monitor the training progress using TensorBoard.
