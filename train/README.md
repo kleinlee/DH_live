@@ -14,7 +14,7 @@ Please ensure that your data directory structure is organized as follows:
 ### Data Preparation
 Next, prepare your video using the data_preparation script. Replace YOUR_VIDEO_PATH with the path to your video:
 ```bash
-python data_preparation.py
+python data_preparation_face.py dir_to_data
 ```
 After running the script, your data directory structure should be updated to:
 ```bash
