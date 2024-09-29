@@ -57,4 +57,4 @@ A pre-trained model can be accessed via both Baidu Netdisk and Google Drive.
 
  [Baidu Netdisk](https://pan.baidu.com/s/1oB7kJl6xf70t1P3rVkypRQ?pwd=ym7k)  Extraction Code: ym7k 
  
- [Google Drive](https://drive.google.com/file/d/1iQmTso2RumR3f-tZCIPiaHe_lZYJnMQe/view?usp=drive_link)
+ [Google Drive](https://drive.google.com/file/d/108-cmzzDglGROMwi-CQ91Eijx1aBGur-/view?usp=drive_link)
