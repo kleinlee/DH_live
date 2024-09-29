@@ -51,3 +51,10 @@ Monitor the training progress using TensorBoard.
 tensorboard --logdir=checkpoint/Dinet_five_ref
 ```
 Then, open http://localhost:6006/ in your web browser to view the training metrics.
+
+### Downloading the Pre-trained Model
+A pre-trained model that has been trained for 120 epochs can be accessed via both Baidu Netdisk and Google Drive.
+
+ [Baidu Netdisk](https://pan.baidu.com/s/1lUgIMlxhAvGY9rfwT9rlxA?pwd=vyzm)  Extraction Code: vyzm
+ 
+ [Google Drive](https://drive.google.com/file/d/1iQmTso2RumR3f-tZCIPiaHe_lZYJnMQe/view?usp=drive_link)
