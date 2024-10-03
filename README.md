@@ -22,7 +22,7 @@ First, navigate to the `checkpoint` directory and unzip the model file:
 ```bash
 conda create -n dh_live python=3.12
 conda activate dh_live
-pip install --index-url https://download.pytorch.org/whl/cu124
+pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
 cd checkpoint
 gzip -d -c render.pth.gz.001 > render.pth
