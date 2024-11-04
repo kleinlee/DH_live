@@ -11,8 +11,8 @@ from talkingface.render_model import RenderModel
 
 def main():
     # 检查命令行参数的数量
-    if len(sys.argv) != 4:
-        print("Usage: python demo.py <video_path> <output_video_name>")
+    if len(sys.argv) < 4:
+        print("Usage: python demo.py <video_path> <output_video_name> <model_name>")
         sys.exit(1)  # 参数数量不正确时退出程序
 
     # 获取video_name参数
@@ -22,12 +22,18 @@ def main():
     print(f"Audio path is set to: {audio_path}")
     output_video_name = sys.argv[3]
     print(f"output video name is set to: {output_video_name}")
+    try:
+        model_name = sys.argv[4]
+        print(f"model_name: {model_name}")
+    except Exception:
+        model_name = "render.pth"
+    
 
     audioModel = AudioModel()
     audioModel.loadModel("checkpoint/audio.pkl")
 
     renderModel = RenderModel()
-    renderModel.loadModel("checkpoint/render.pth")
+    renderModel.loadModel(f"checkpoint/{model_name}")
     pkl_path = "{}/keypoint_rotate.pkl".format(video_path)
     video_path = "{}/circle.mp4".format(video_path)
     renderModel.reset_charactor(video_path, pkl_path)
@@ -54,7 +60,7 @@ def main():
     videoWriter.release()
     val_video = "../output/{}.mp4".format(task_id)
     os.system(
-        "ffmpeg -i {} -i {} -c:v libx264 -pix_fmt yuv420p -loglevel quiet {}".format(save_path, wavpath, output_video_name))
+        "ffmpeg -y -i {} -i {} -c:v libx264 -pix_fmt yuv420p -loglevel quiet {}".format(save_path, wavpath, output_video_name))
     shutil.rmtree("output/{}".format(task_id))
 
 
