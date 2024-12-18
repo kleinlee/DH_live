@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, user-scalable=0"/>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>MiniLive</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        video, canvas {
+            border: 2px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Make the video hidden*/
+        #video {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 1px; /* 设置为 1px 以保持宽高比 */
+            height: 1px; /* 设置为 1px 以保持宽高比 */
+            object-fit: contain; /* 保持视频的原始宽高比 */
+        }
+
+        #canvas_video {
+            width: 360px;
+            height: 640px;
+            margin-top: 5px;
+        }
+
+        #canvas_gl {
+                position: absolute;
+    top: -9999px;
+    left: -9999px;
+            width: 128px;
+            height: 128px;
+        }
+
+
+      #screen {
+        position: absolute;
+        bottom: -1000;
+        right: -1000;
+        width: 1px;
+        height: 1px;
+      }
+      #uploadButton {
+        width: 100%;
+        height: 50px;
+        margin-top: 10px;
+      }
+    </style>
+
+  </head>
+  <body>
+    <figure style="overflow:visible;" id="loadingSpinner">
+        <strong>MiniMates: loading...</strong>
+    </figure>
+    <video id="video" src="assets/01.mp4" controls muted loop></video>
+
+    <!-- Visible canvas elements -->
+    <canvas id="canvas_video"></canvas>
+
+    <canvas id="canvas_gl" width="128" height="128"></canvas>
+    <button id="playButton">开始播放</button>
+    <button id="uploadButton">请上传16k hz的wav文件</button>
+
+    <input type="file" id="fileInput" accept=".wav" style="display:none;">
+    <audio id="audio" controls style="display:none;">
+      <source id="audioSource" src="" type="audio/wav">
+    </audio>
+    <div id="screen"></div>
+
+    <script src="js/gl-matrix-min.js"></script>
+    <script src="js/MiniLive2.js"></script>
+    <script src="js/DHLiveMini.js"></script>
+    <script src="js/MiniMateLoader.js"></script>
+  </body>
+</html>
