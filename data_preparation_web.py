@@ -280,7 +280,15 @@ def step3_generate_ref_tensor(list_source_crop_rect, list_standard_v, out_path):
     np.savetxt(os.path.join(out_path, 'ref_data.txt'), ref_in_feature, fmt='%.8f')
 
 def main():
-    video_in_path = r"E:\data\video\video/5.mp4"
+    # 检查命令行参数的数量
+    if len(sys.argv) != 2:
+        print("Usage: python data_preparation_web.py <video_name>")
+        sys.exit(1)  # 参数数量不正确时退出程序
+
+    # 获取video_name参数
+    video_in_path = sys.argv[1]
+
+    # video_in_path = r"E:\data\video\video/5.mp4"
     out_path = "web_demo/static/assets"
     pts_3d, vid_width,vid_height = step0_keypoints(video_in_path, out_path)
     list_source_crop_rect, list_standard_v = step1_crop_mouth(pts_3d, vid_width, vid_height)
