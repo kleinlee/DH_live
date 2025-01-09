@@ -1,19 +1,6 @@
 # Mobile and Web Real-time Live Streaming Digital Human! 
 # 实时直播数字人  [bilibili video](https://www.bilibili.com/video/BV1Ppv1eEEgj/?vd_source=53601feee498369e726af7dbc2dae349)
-# 数字人方案对比
 
-以下表格展示了不同数字人方案的性能、使用方式、脸部分辨率及适用设备等信息，方便用户根据需求选择合适的方案。
-
-| 方案名称                     | 单帧算力（Mflops） | 使用方式   | 脸部分辨率 | 适用设备                           |
-|------------------------------|-------------------|------------|------------|------------------------------------|
-| Ultralight-Digital-Human（mobile） | 1100              | 单人训练   | 160        | 中高端手机APP                      |
-| DH_live_mini                  | 39                | 无须训练   | 128        | 所有设备，网页&APP&小程序          |
-| DH_live                       | 55,046            | 无须训练   | 256        | 30系以上显卡                       |
-| duix.ai                      | 1,200             | 单人训练   | 168        | 中高端手机APP                      |
-
-### News
-## Fastest model released! More demos joins me through the contact information at the bottom!
- All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 ## Training
 Details on the render model training can be found [here](https://github.com/kleinlee/DH_live/tree/master/train).
 Audio Model training Details can be found [here](https://github.com/kleinlee/DH_live/tree/master/train_audio).
