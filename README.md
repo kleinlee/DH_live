@@ -1,10 +1,9 @@
 # Mobile and Web Real-time Live Streaming Digital Human! 
-# 实时直播数字人 
+# 实时数字人 全网最快
+Notes：目前项目主要维护DH_live_mini, 目前最快的数字人方案，没有之一，项目含有网页推理的案例，不依赖任何GPU，可在任何手机设备实时运行。原版DH_live已不再或支持，希望慎重考虑使用,原版使用方法参见。
 DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/video/BV1pWkwYWEn4)
 
-DHLive GPU实时推理[bilibili video](https://www.bilibili.com/video/BV1Ppv1eEEgj)
 # 数字人方案对比
-
 
 | 方案名称                     | 单帧算力（Mflops） | 使用方式   | 脸部分辨率 | 适用设备                           |
 |------------------------------|-------------------|------------|------------|------------------------------------|
@@ -13,27 +12,17 @@ DHLive GPU实时推理[bilibili video](https://www.bilibili.com/video/BV1Ppv1eEE
 | DH_live                       | 55046            | 无须训练   | 256        | 30系以上显卡                       |
 | duix.ai                      | 1200             | 单人训练   | 160        | 中高端手机APP                      |
 
-### News
-## Fastest model released! More demos joins me through the contact information at the bottom!
- All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
-## Training
-Details on the render model training can be found [here](https://github.com/kleinlee/DH_live/tree/master/train).
-Audio Model training Details can be found [here](https://github.com/kleinlee/DH_live/tree/master/train_audio).
-### Video Example
-
-
-https://github.com/user-attachments/assets/7e0b5bc2-067b-4048-9f88-961afed12478
-
-
-## Overview
-This project is a real-time live streaming digital human powered by few-shot learning. It is designed to run smoothly on all 30 and 40 series graphics cards, ensuring a seamless and interactive live streaming experience.
+### checkpoint
+All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 
 ### Key Features
-- **Real-time Performance**: The digital human can interact in real-time with 25+ fps for common NVIDIA 30 and 40 series GPUs
-- **Few-shot Learning**: The system is capable of learning from a few examples to generate realistic responses.
+- **最低算力**: 推理一帧的算力39 Mflops，有多小？小于手机端大部分的人脸检测算法。
+- **最小存储**：整个网页资源可以压缩到3MB！
+- **无须训练**: 开箱即用，无需复杂的训练过程。
+  
 ## Usage
 
-### Create Environment and Unzip the Model File 
+### Create Environment
 First, navigate to the `checkpoint` directory and unzip the model file:
 ```bash
 conda create -n dh_live python=3.12
@@ -44,29 +33,24 @@ cd checkpoint
 ```
 unzip checkpoint files from [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 ### Prepare Your Video
-Next, prepare your video using the data_preparation script. Replace YOUR_VIDEO_PATH with the path to your video:
 ```bash
-python data_preparation.py YOUR_VIDEO_PATH
+python data_preparation_web.py YOUR_VIDEO_PATH
 ```
-The result (video_info) will be stored in the ./video_data directory.
+处理后的视频信息将存储在 ./video_data 目录中。
 ### Run with Audio File
-Run the demo script with an audio file. Make sure the audio file is in .wav format with a sample rate of 16kHz and 16-bit single channel. Replace video_data/test with the path to your video_info file, video_data/audio0.wav with the path to your audio file, and 1.mp4 with the desired output video path:
 ```bash
-python demo.py video_data/test video_data/audio0.wav 1.mp4
+python demo_mini.py video_data/test video_data/audio0.wav 1.mp4
 ```
-### Real-Time Run with Microphone
-For real-time operation using a microphone, simply run the following command:
+### Web demo
 ```bash
-python demo_avatar.py
+python data_preparation_web.py YOUR_VIDEO_PATH
+cd web_demo
+python server.py
 ```
-
-## Acknowledgements 
-We would like to thank the contributors of [Wav2Lip](https://github.com/Rudrabha/Wav2Lip), [DINet](https://github.com/MRzzm/DINet), [LiveSpeechPortrait](https://github.com/YuanxunLu/LiveSpeechPortraits) repositories, for their open research and contributions.
-
+可以打开 localhost:8888/static/MiniLive.html, 可以手机上打开。
 ## License
 DH_live is licensed under the MIT License.
 
-DH_live_mini is licensed under the Apache 2.0.
 ## 联系
 | 进入QQ群聊，分享看法和最新咨询。 | 加我好友，请备注“进群”，拉你进去微信交流群。 |
 |-------------------|----------------------|
