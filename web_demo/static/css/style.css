@@ -38,13 +38,14 @@ body, html {
 }
 
 .sender {
+    background-color: rgba(220, 248, 198, 0.4); /* 半透明背景 */
     background-color: #DCF8C6;
     float: right;
     clear: both;
 }
 
 .receiver {
-    background-color: #E0EAF4;
+    background-color: rgba(224, 234, 244, 0.4); /* 半透明背景 */
     float: left;
     clear: both;
 }
