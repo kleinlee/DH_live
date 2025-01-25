@@ -89,9 +89,8 @@ def interface_mini(path, wav_path, output_video_path):
     save_path = "{}.mp4".format(task_id)
     videoWriter = cv2.VideoWriter(save_path, fourcc, 25, (int(vid_width), int(vid_height)))
 
-    for frame_index in range(len(mat_list)):
-        if frame_index >= len(bs_array):
-            continue
+    for index2_ in range(len(bs_array)):
+        frame_index = index2_%len(mat_list)
         bs = np.zeros([12], dtype=np.float32)
         bs[:6] = bs_array[frame_index, :6]
         # bs[2] = frame_index* 5

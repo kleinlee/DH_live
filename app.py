@@ -10,8 +10,10 @@ from demo_mini import interface_mini
 # 自定义 CSS 样式
 css = """
 #video-output video {
-    max-width: 600px;
-    max-height: 600px;
+    max-width: 300px;
+    max-height: 300px;
+    display: block;
+    margin: 0 auto;
 }
 """
 
@@ -59,7 +61,7 @@ def launch_server():
 
 # 定义 Gradio 界面
 def create_interface():
-    with gr.Blocks() as demo:
+    with gr.Blocks(css=css) as demo:
         # 标题
         gr.Markdown("# 视频处理与生成工具")
 
@@ -87,9 +89,13 @@ def create_interface():
         - 此步骤用于初步验证结果。网页demo请执行第三步。
         """)
         # audio = gr.Audio(label="上传音频文件")
-        audio = gr.Audio(label="上传音频文件", type="filepath")
-        generate_button = gr.Button("生成视频")
-        video_output = gr.Video(label="生成的视频", elem_id="video-output")
+
+        with gr.Row():
+            with gr.Column():
+                audio = gr.Audio(label="上传音频文件", type="filepath")
+                generate_button = gr.Button("生成视频")
+            with gr.Column():
+                video_output = gr.Video(label="生成的视频", elem_id="video-output")
 
         # 分隔线
         gr.Markdown("---")
