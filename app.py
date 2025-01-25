@@ -73,9 +73,9 @@ def create_interface():
         """)
         with gr.Row():
             with gr.Column():
-                video1 = gr.Video(label="上传静默视频", elem_id="video-output")
+                video2 = gr.Video(label="上传静默视频", elem_id="video-output")
             with gr.Column():
-                video2 = gr.Video(label="上传说话视频", elem_id="video-output")
+                video1 = gr.Video(label="上传说话视频", elem_id="video-output")
         process_button = gr.Button("处理视频")
         process_output = gr.Textbox(label="处理结果")
 
