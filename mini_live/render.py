@@ -195,7 +195,7 @@ if __name__ == "__main__":
     path = r"F:\C\AI\CV\DH008_few_shot/preparation_new"
     video_list = os.listdir(r"{}".format(path))
     print(video_list)
-    for test_video in video_list[:15]:
+    for test_video in video_list[:10]:
         Path_output_pkl = "{}/{}/keypoint_rotate.pkl".format(path, test_video)
         with open(Path_output_pkl, "rb") as f:
             images_info = pickle.load(f)
@@ -233,6 +233,10 @@ if __name__ == "__main__":
         renderModel_mini.reset_charactor(list_standard_img, np.array(list_standard_v)[:,main_keypoints_index])
         from talkingface.run_utils import calc_face_mat
         mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), renderModel_gl.face_pts_mean)
+
+        from mini_live.obj.utils import INDEX_MP_LIPS
+        face_pts_mean_personal_primer[INDEX_MP_LIPS] = renderModel_gl.face_pts_mean[INDEX_MP_LIPS] * 0.4 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.6
+
         from mini_live.obj.wrap_utils import newWrapModel
         face_wrap_entity = newWrapModel(wrapModel, face_pts_mean_personal_primer)
 

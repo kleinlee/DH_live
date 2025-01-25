@@ -29,18 +29,22 @@ class RenderModel_Mini:
 
 
     def reset_charactor(self, img_list, driven_keypoints, standard_size = 256):
-        ref_img_index_list = select_ref_index(driven_keypoints, n_ref=3, ratio=0.33)  # 从当前视频选n_ref个图片
+        ref_img_index_list = select_ref_index(driven_keypoints, n_ref=3, ratio=0.5)  # 从当前视频选n_ref个图片
         ref_img_list = []
         for i in ref_img_index_list:
             ref_face_edge = draw_mouth_maps(driven_keypoints[i], size=(standard_size, standard_size))
+            # cv2.imshow("ss", ref_face_edge)
+            # cv2.waitKey(-1)
             ref_img = img_list[i]
+            # cv2.imshow("ss", ref_img)
+            # cv2.waitKey(-1)
             ref_face_edge = cv2.resize(ref_face_edge, (128, 128))
             ref_img = cv2.resize(ref_img, (128, 128))
             w_pad = int((128 - 72) / 2)
             h_pad = int((128 - 56) / 2)
 
             ref_img = np.concatenate([ref_img[h_pad:-h_pad, w_pad:-w_pad,:3], ref_face_edge[h_pad:-h_pad, w_pad:-w_pad, :1]], axis=2)
-            # cv2.imshow("ss", ref_img[:,:,::-1])
+            # cv2.imshow("ss", ref_face_edge[h_pad:-h_pad, w_pad:-w_pad])
             # cv2.waitKey(-1)
             ref_img_list.append(ref_img)
         self.ref_img = np.concatenate(ref_img_list, axis=2)

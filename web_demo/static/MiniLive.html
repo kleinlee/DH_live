@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, user-scalable=0"/>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="common/favicon.ico" type="image/x-icon">
     <title>MiniLive</title>
     <style>
         body {
@@ -15,6 +15,7 @@
             height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+            overflow: hidden; /* 防止滚动条出现 */
         }
 
         video, canvas {
@@ -22,26 +23,19 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
-        /* Make the video hidden*/
-        #video {
+#canvas_video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+        #canvas_gl {
             position: absolute;
             top: -9999px;
             left: -9999px;
-            width: 1px; /* 设置为 1px 以保持宽高比 */
-            height: 1px; /* 设置为 1px 以保持宽高比 */
-            object-fit: contain; /* 保持视频的原始宽高比 */
-        }
-
-        #canvas_video {
-            width: 360px;
-            height: 640px;
-            margin-top: 5px;
-        }
-
-        #canvas_gl {
-                position: absolute;
-    top: -9999px;
-    left: -9999px;
             width: 128px;
             height: 128px;
         }
@@ -54,11 +48,26 @@
         width: 1px;
         height: 1px;
       }
-      #uploadButton {
-        width: 100%;
-        height: 50px;
-        margin-top: 10px;
-      }
+
+      #screen2 {
+            width: 100%;
+            height: 100%;
+            position: absolute; /* Position the iframe absolutely */
+            top: 0;
+            left: 0;
+            border: none;
+            z-index: 5; /* Ensure iframe is above other elements */
+        }
+        /* 居中显示“请点击开始” */
+        #startMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 
   </head>
@@ -66,21 +75,17 @@
     <figure style="overflow:visible;" id="loadingSpinner">
         <strong>MiniMates: loading...</strong>
     </figure>
-    <video id="video" src="assets/01.mp4" controls muted loop></video>
 
     <!-- Visible canvas elements -->
     <canvas id="canvas_video"></canvas>
 
     <canvas id="canvas_gl" width="128" height="128"></canvas>
-    <button id="playButton">开始播放</button>
-    <button id="uploadButton">请上传16k hz的wav文件</button>
 
-    <input type="file" id="fileInput" accept=".wav" style="display:none;">
-    <audio id="audio" controls style="display:none;">
-      <source id="audioSource" src="" type="audio/wav">
-    </audio>
     <div id="screen"></div>
-
+    <iframe id="screen2" src="dialog.html" frameborder="0" style="display: none;"></iframe>
+    <!-- 添加“请点击开始”的元素 -->
+    <div id="startMessage">请点击开始按钮</div>
+    <script src="js/mp4box.all.min.js"></script>
     <script src="js/gl-matrix-min.js"></script>
     <script src="js/MiniLive2.js"></script>
     <script src="js/DHLiveMini.js"></script>

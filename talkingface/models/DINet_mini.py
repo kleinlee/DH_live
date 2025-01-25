@@ -342,18 +342,39 @@ class DINet_mini_pipeline(nn.Module):
         warped_img0 = F.grid_sample(source_tensor, warped_grid, mode='bilinear', padding_mode='zeros',
                                     align_corners=False)
 
-        # print(warped_img0.size(), face_mask.size())
-        warped_tensor = warped_img0 * (1 - face_mask) + gl_tensor * face_mask
-        warped_tensor = F.interpolate(warped_tensor, (128, 128))
+        # # print(warped_img0.size(), face_mask.size())
+        warped_tensor = warped_img0[:, :3]*(1-face_mask)
+        # # warped_tensor = F.interpolate(warped_tensor, (128, 128))
+        # w_pad = int((128 - 72) / 2)
+        # h_pad = int((128 - 56) / 2)
+        # gl_mouth_tensor = gl_tensor * face_mask
+        # gl_mouth_tensor = gl_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
+        # fake_mouth_tensor = warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
+        # # fake_out = self.infer_model.interface(fake_mouth_tensor)
+        # fake_mouth_tensor_input = fake_mouth_tensor*(1-self.mouth_fusion_tensor) + gl_mouth_tensor
+        # fake_out = self.infer_model.interface(fake_mouth_tensor_input)
+        # # fake_out = fake_mouth_tensor
+        # fake_out = fake_out * self.mouth_fusion_tensor + fake_mouth_tensor*(1-self.mouth_fusion_tensor)
+        # warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad] = fake_out
+        # return warped_tensor
+
+        # warped_tensor = warped_img0
         w_pad = int((128 - 72) / 2)
         h_pad = int((128 - 56) / 2)
+        gl_mouth_tensor = gl_tensor * face_mask
+        gl_mouth_tensor = gl_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
 
-        fake_mouth_tensor = warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
-        fake_out = self.infer_model.interface(fake_mouth_tensor)
-        # fake_out = fake_mouth_tensor
-        fake_out = fake_out * self.mouth_fusion_tensor + fake_mouth_tensor*(1-self.mouth_fusion_tensor)
-        warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad] = fake_out
-        return warped_tensor
+        warped_mouth_tensor = warped_tensor
+        warped_mouth_tensor = warped_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
+
+        fake_mouth_tensor_input = warped_mouth_tensor + gl_mouth_tensor
+        fake_out = self.infer_model.interface(fake_mouth_tensor_input)
+        # fake_out = warped_mouth_tensor
+        fake_out = fake_out * self.mouth_fusion_tensor + warped_mouth_tensor*(1-self.mouth_fusion_tensor)
+        warped_img0[:, :3, h_pad:-h_pad, w_pad:-w_pad] = fake_out
+        warped_img0[:,3] = source_tensor[:,3]
+        return warped_img0
+
     def forward(self, source_tensor, gl_tensor, ref_tensor):
         '''
 

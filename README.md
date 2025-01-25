@@ -21,12 +21,17 @@ All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrI
 - **最小存储**：整个网页资源可以压缩到3MB！
 - **无须训练**: 开箱即用，无需复杂的训练过程。
   
+## Easy Usage(Gradio)
+```bash
+python app.py
+```
+
 ## Usage
 
 ### Create Environment
 First, navigate to the `checkpoint` directory and unzip the model file:
 ```bash
-conda create -n dh_live python=3.12
+conda create -n dh_live python=3.11
 conda activate dh_live
 pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
@@ -35,20 +40,20 @@ cd checkpoint
 unzip checkpoint files from [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 ### Prepare Your Video
 ```bash
-python data_preparation_web.py YOUR_VIDEO_PATH
+python data_preparation_mini.py video_data/000002/talk.mp4 video_data/000002/video.mp4 video_data/000002
+python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。
 ### Run with Audio File
 ```bash
-python demo_mini.py video_data/test video_data/audio0.wav 1.mp4
+python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
 ```
 ### Web demo
+请将新形象包中的assets文件(譬如video_data/000002/assets)替换 assets 文件夹中的对应文件
 ```bash
-python data_preparation_web.py YOUR_VIDEO_PATH
-cd web_demo
-python server.py
+python web_demo/server.py
 ```
-可以打开 localhost:8888/static/MiniLive.html, 可以手机上打开。
+可以打开 localhost:8888/static/MiniLive.html。
 ## License
 DH_live is licensed under the MIT License.
 

@@ -49,8 +49,8 @@ class DINetTrainingOptions():
         self.parser.add_argument('--lr_g', type=float, default=0.00008, help='initial learning rate for adam')
         self.parser.add_argument('--lr_d', type=float, default=0.00008, help='initial learning rate for adam')
         self.parser.add_argument('--start_epoch', default=1, type=int, help='start epoch in training stage')
-        self.parser.add_argument('--non_decay', default=10, type=int, help='num of epoches with fixed learning rate')
-        self.parser.add_argument('--decay', default=30, type=int, help='num of linearly decay epochs')
+        self.parser.add_argument('--non_decay', default=4, type=int, help='num of epoches with fixed learning rate')
+        self.parser.add_argument('--decay', default=36, type=int, help='num of linearly decay epochs')
         self.parser.add_argument('--checkpoint', type=int, default=2, help='num of checkpoints in training stage')
         self.parser.add_argument('--result_path', type=str, default=r"./asserts/training_model_weight/frame_training_64",
                                  help='result path to save model')

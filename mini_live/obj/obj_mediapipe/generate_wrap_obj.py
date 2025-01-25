@@ -46,7 +46,9 @@ for i in INDEX_MP_LIPS_LOWER:
 # print(index_lips_wrap)
 # exit(-1)
 
-index_edge_wrap = [111,43,57,21,76,59,68,67,78,66,69,168,177,169,170,161,176,123,159,145,208]
+# index_edge_wrap = [111,43,57,21,76,59,68,67,78,66,69,168,177,169,170,161,176,123,159,145,208]
+# index_edge_wrap = [110,60,79,108,61,58,73,74,62,75,77,175,164,174,173,160,163,205,178,162,207]
+index_edge_wrap = [110,60,79,108,61,58,73,67,78,66,69,168,177,169,173,160,163,205,178,162,207]
 index_edge_wrap_upper = [111, 110, 51, 52, 53, 54, 48, 63, 56, 47, 46, 1, 148, 149, 158, 165, 150, 156, 155, 154, 153, 207, 208]
 import numpy as np
 def readObjFile(filepath):
@@ -79,6 +81,7 @@ new_vert_list = []
 for i in range(len(index_edge_wrap)):
     index = index_edge_wrap[i]
     new_vert = verts_wrap[index] + (verts_wrap[index] - vert_mid) * 0.3
+    new_vert[2] = verts_wrap[index, 2]
     new_vert_list.append(new_vert)
     index_new_edge.append(len(index_wrap) + i)
 for i in range(len(index_edge_wrap) - 1):

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>聊天界面</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        html, body { padding: 0; margin: 0; overflow: hidden; height: 100%; }
+        .chat-container { position: relative; height: calc(100% - 50px); }
+        #screen { width: 100%; height: 100%; z-index: 1; }
+        .input-area { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; align-items: center; background-color: #fff; padding: 10px; box-shadow: 0 -2px 5px rgba(0,0,0,.1); }
+        .config-options { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="screen"></div>
+        <div class="chat-content">
+            <!-- 聊天消息将动态添加于此 -->
+        </div>
+    </div>
+    <div class="input-area">
+        <button id="startButton">开始</button>
+        <input type="text" id="textInput" placeholder="输入你的消息...">
+        <button id="pushButton" onclick="runPrompt()">发送</button>
+    </div>
+    <script src="js/dialog.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import os
+import uuid
 os.environ["kmp_duplicate_lib_ok"] = "true"
-import os
 from mini_live.obj.wrap_utils import index_wrap, index_edge_wrap
 current_dir = os.path.dirname(os.path.abspath(__file__))
 from mini_live.render import create_render_model
@@ -10,13 +10,12 @@ import time
 import numpy as np
 import glob
 import random
-import os
 import sys
 import torch
 from talkingface.model_utils import LoadAudioModel, Audio2bs
 from talkingface.data.few_shot_dataset import get_image
 
-def run(video_path, pkl_path, wav_path, output_video_path):
+def interface_mini(path, wav_path, output_video_path):
     Audio2FeatureModel = LoadAudioModel(r'checkpoint/lstm/lstm_model_epoch_325.pkl')
 
     from talkingface.render_model_mini import RenderModel_Mini
@@ -32,13 +31,13 @@ def run(video_path, pkl_path, wav_path, output_video_path):
 
     from mini_live.obj.obj_utils import generateWrapModel
     from talkingface.utils import crop_mouth, main_keypoints_index
+    import json
     wrapModel, wrapModel_face = generateWrapModel()
 
-    with open(pkl_path, "rb") as f:
-        images_info = pickle.load(f)
+    with open(os.path.join(path, "json_data.json"), "rb") as f:
+        images_info = json.load(f)
 
-    images_info = np.concatenate([images_info, images_info[::-1]], axis=0)
-
+    video_path = os.path.join(path, "01.mp4")
     cap = cv2.VideoCapture(video_path)
     vid_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     vid_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -48,34 +47,43 @@ def run(video_path, pkl_path, wav_path, output_video_path):
     list_video_img = []
     list_standard_img = []
     list_standard_v = []
-    list_standard_vt = []
     for frame_index in range(min(vid_frame_count, len(images_info))):
         ret, frame = cap.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        source_pts = images_info[frame_index]
-        source_crop_rect = crop_mouth(source_pts[main_keypoints_index], vid_width, vid_height)
+        standard_v = images_info[frame_index]["points"][16:]
+        source_crop_rect = images_info[frame_index]["rect"]
 
         standard_img = get_image(frame, source_crop_rect, input_type="image", resize=standard_size)
-        standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
-        standard_vt = standard_v[:, :2] / standard_size
 
         list_video_img.append(frame)
         list_source_crop_rect.append(source_crop_rect)
         list_standard_img.append(standard_img)
-        list_standard_v.append(standard_v)
-        list_standard_vt.append(standard_vt)
+        list_standard_v.append(np.array(standard_v).reshape(-1, 2) * 2)
     cap.release()
 
-    renderModel_mini.reset_charactor(list_standard_img, np.array(list_standard_v)[:, main_keypoints_index])
-    from talkingface.run_utils import calc_face_mat
-    mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), renderModel_gl.face_pts_mean)
-    from mini_live.obj.wrap_utils import newWrapModel
-    face_wrap_entity = newWrapModel(wrapModel, face_pts_mean_personal_primer)
+    ref_data_path = np.loadtxt(os.path.join(path, "ref_data.txt")).reshape([1, 20, 14, 18])
+    renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data_path).float().cuda()
+
+    mat_list = [np.array(i["points"][:16]).reshape(4,4)*2 for i in images_info]
+
+
+    # 读取个性化obj
+    v_ = []
+    with open(os.path.join(path, "face3D.obj")) as f:
+        content = f.readlines()
+        for i in content:
+            if i[:2] == "v ":
+                v0, v1, v2, v3, v4 = i[2:-1].split(" ")
+                v_.append(float(v0))
+                v_.append(float(v1))
+                v_.append(float(v2))
+                v_.append(float(v3))
+                v_.append(float(v4))
+    face_wrap_entity = np.array(v_).reshape(-1, 5)
 
     renderModel_gl.GenVBO(face_wrap_entity)
 
     bs_array = Audio2bs(wav_path, Audio2FeatureModel)[5:] * 0.5
-    import uuid
     task_id = str(uuid.uuid1())
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     save_path = "{}.mp4".format(task_id)
@@ -88,10 +96,12 @@ def run(video_path, pkl_path, wav_path, output_video_path):
         bs[:6] = bs_array[frame_index, :6]
         # bs[2] = frame_index* 5
 
-        verts_frame_buffer = np.array(list_standard_vt)[frame_index, index_wrap, :2].copy() * 2 - 1
+        verts_frame_buffer = np.array(list_standard_v)[frame_index, :, :2].copy()/256. * 2 - 1
 
-        rgba = renderModel_gl.render2cv(verts_frame_buffer, out_size=out_size, mat_world=mat_list[frame_index].T,
+        rgba = renderModel_gl.render2cv(verts_frame_buffer, out_size=out_size, mat_world=mat_list[frame_index],
                                         bs_array=bs)
+        # cv2.imshow('scene', rgba)
+        # cv2.waitKey(40)
         # rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
         # rgba = cv2.resize(rgba, (128, 128))
         rgba = rgba[::2, ::2, :]
@@ -120,29 +130,36 @@ def run(video_path, pkl_path, wav_path, output_video_path):
     videoWriter.release()
 
     os.system(
-        "ffmpeg -i {} -i {} -c:v libx264 -pix_fmt yuv420p {}".format(save_path, wav_path, output_video_path))
+        "ffmpeg -i {} -i {} -c:v libx264 -pix_fmt yuv420p -y {}".format(save_path, wav_path, output_video_path))
     os.remove(save_path)
 
     cv2.destroyAllWindows()
 
+# def main():
+#     path = r"video_data\000004\assets"
+#     wav_path = "video_data/audio0.wav"
+#     output_video_name = "001.mp4"
+#
+#     wav2_dir = glob.glob(r"../test_wav/*.wav")
+#     for wav_path in wav2_dir[:2]:
+#         output_video_name = "output/{}.mp4".format(uuid.uuid4())
+#         interface_mini(path, wav_path, output_video_name)
+
 def main():
     # 检查命令行参数的数量
     if len(sys.argv) < 4:
-        print("Usage: python demo_mini.py <video_path> <audio_path> <output_video_name>")
+        print("Usage: python demo_mini.py <asset_path> <audio_path> <output_video_name>")
         sys.exit(1)  # 参数数量不正确时退出程序
 
     # 获取video_name参数
-    video_path = sys.argv[1]
-    print(f"Video path is set to: {video_path}")
+    asset_path = sys.argv[1]
+    print(f"Video asset path is set to: {asset_path}")
     wav_path = sys.argv[2]
     print(f"Audio path is set to: {wav_path}")
     output_video_name = sys.argv[3]
     print(f"output video name is set to: {output_video_name}")
 
-    pkl_path = "{}/keypoint_rotate.pkl".format(video_path)
-    video_path = "{}/circle.mp4".format(video_path)
-
-    run(video_path, pkl_path, wav_path, output_video_name)
+    interface_mini(asset_path, wav_path, output_video_name)
 
 # 示例使用
 if __name__ == "__main__":

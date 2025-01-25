@@ -18,7 +18,9 @@ async function init()
                     }
                 });
             await init_gl();
+            document.getElementById('screen2').style.display = 'block';
 }
+
 
 async function qtLoad(config)
 {

@@ -111,7 +111,7 @@ def calc_face_mat(pts_array_origin, face_pts_mean):
     smooth_array_ = sub_mat_list.reshape(-1, 16)
     import pandas as pd
 
-    smooth_array_ = smooth_array(smooth_array_, weight = [0.04,0.08,0.13,0.5,0.13,0.08,0.04])
+    smooth_array_ = smooth_array(smooth_array_, weight = [0.03, 0.1, 0.74, 0.1, 0.03])
     # pd.DataFrame(smooth_array_[200:400]).to_csv("sad.csv")
     # exit(-1)
     # print(smooth_array_, smooth_array_.shape)
