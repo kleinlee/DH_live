@@ -1,15 +1,11 @@
 import os
 import uuid
 os.environ["kmp_duplicate_lib_ok"] = "true"
-from mini_live.obj.wrap_utils import index_wrap, index_edge_wrap
 current_dir = os.path.dirname(os.path.abspath(__file__))
 from mini_live.render import create_render_model
-import pickle
 import cv2
-import time
+import json
 import numpy as np
-import glob
-import random
 import sys
 import torch
 from talkingface.model_utils import LoadAudioModel, Audio2bs
@@ -28,11 +24,6 @@ def interface_mini(path, wav_path, output_video_path):
     out_h = int(standard_size * (crop_rotio[2] + crop_rotio[3]))
     out_size = (out_w, out_h)
     renderModel_gl = create_render_model((out_w, out_h), floor=20)
-
-    from mini_live.obj.obj_utils import generateWrapModel
-    from talkingface.utils import crop_mouth, main_keypoints_index
-    import json
-    wrapModel, wrapModel_face = generateWrapModel()
 
     with open(os.path.join(path, "json_data.json"), "rb") as f:
         images_info = json.load(f)
@@ -93,18 +84,12 @@ def interface_mini(path, wav_path, output_video_path):
         frame_index = index2_%len(mat_list)
         bs = np.zeros([12], dtype=np.float32)
         bs[:6] = bs_array[frame_index, :6]
-        # bs[2] = frame_index* 5
 
         verts_frame_buffer = np.array(list_standard_v)[frame_index, :, :2].copy()/256. * 2 - 1
 
         rgba = renderModel_gl.render2cv(verts_frame_buffer, out_size=out_size, mat_world=mat_list[frame_index],
                                         bs_array=bs)
-        # cv2.imshow('scene', rgba)
-        # cv2.waitKey(40)
-        # rgb = cv2.cvtColor(rgba, cv2.COLOR_RGBA2RGB)
-        # rgba = cv2.resize(rgba, (128, 128))
         rgba = rgba[::2, ::2, :]
-
         gl_tensor = torch.from_numpy(rgba / 255.).float().permute(2, 0, 1).unsqueeze(0)
         source_tensor = cv2.resize(list_standard_img[frame_index], (128, 128))
         source_tensor = torch.from_numpy(source_tensor / 255.).float().permute(2, 0, 1).unsqueeze(0)
@@ -133,16 +118,6 @@ def interface_mini(path, wav_path, output_video_path):
     os.remove(save_path)
 
     cv2.destroyAllWindows()
-
-# def main():
-#     path = r"video_data\000004\assets"
-#     wav_path = "video_data/audio0.wav"
-#     output_video_name = "001.mp4"
-#
-#     wav2_dir = glob.glob(r"../test_wav/*.wav")
-#     for wav_path in wav2_dir[:2]:
-#         output_video_name = "output/{}.mp4".format(uuid.uuid4())
-#         interface_mini(path, wav_path, output_video_name)
 
 def main():
     # 检查命令行参数的数量

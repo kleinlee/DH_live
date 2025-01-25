@@ -167,15 +167,6 @@ def data_preparation_web(path):
     step2_generate_obj(list_source_crop_rect, list_standard_v, out_path)
     step3_generate_ref_tensor(video_path, out_path)
 
-# def main():
-#     path = r"video_data/000002"
-#     video_path = os.path.join(path, "data")
-#     out_path = os.path.join(path, "assets")
-#     os.makedirs(out_path, exist_ok=True)
-#     pts_3d, vid_width,vid_height = step0_keypoints(video_path, out_path)
-#     list_source_crop_rect, list_standard_v = step1_crop_mouth(pts_3d, vid_width, vid_height)
-#     step2_generate_obj(list_source_crop_rect, list_standard_v, out_path)
-#     step3_generate_ref_tensor(video_path, out_path)
 def main():
     # 检查命令行参数的数量
     if len(sys.argv) != 2:
