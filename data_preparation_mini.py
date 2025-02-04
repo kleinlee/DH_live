@@ -11,11 +11,10 @@ import mediapipe as mp
 mp_face_mesh = mp.solutions.face_mesh
 mp_face_detection = mp.solutions.face_detection
 
-
-def detect_face(frame):
+def detect_face(frame, min_detection_confidence = 0.5):
     # 剔除掉多个人脸、大角度侧脸（鼻子不在两个眼之间）、部分人脸框在画面外、人脸像素低于80*80的
     with mp_face_detection.FaceDetection(
-            model_selection=1, min_detection_confidence=0.5) as face_detection:
+            model_selection=1, min_detection_confidence=min_detection_confidence) as face_detection:
         results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         if not results.detections or len(results.detections) > 1:
             return -1, None
@@ -35,7 +34,7 @@ def detect_face(frame):
         # print(frame.shape)
         if out_rect[0] < 0 or out_rect[2] < 0 or out_rect[1] > w or out_rect[3] > h:
             return -3, out_rect
-        if rect.width * w < 100 or rect.height * h < 100:
+        if rect.width * w < 60 or rect.height * h < 60:
             return -4, out_rect
     return 1, out_rect
 
@@ -92,41 +91,30 @@ def ExtractFromVideo(video_path, face_rect=None):
         if ret is False:
             break
 
-        if face_rect is None:
-            tag_, rect = detect_face(frame)
-            if frame_index == 0 and tag_ != 1:
-                print("第一帧人脸检测异常，请剔除掉多个人脸、大角度侧脸（鼻子不在两个眼之间）、部分人脸框在画面外、人脸像素低于80*80")
-                pts_3d = -1
-                break
-            elif tag_ == -1:  # 有时候人脸检测会失败，就用上一帧的结果替代这一帧的结果
-                rect = face_rect_list[-1]
-            elif tag_ != 1:
-                print("第{}帧人脸检测异常，请剔除掉多个人脸、大角度侧脸（鼻子不在两个眼之间）、部分人脸框在画面外、人脸像素低于80*80, tag: {}".format(frame_index, tag_))
-                # exit()
-            if len(face_rect_list) > 0:
-                face_area_inter = calc_face_interact(face_rect_list[-1], rect)
-                # print(frame_index, face_area_inter)
-                if face_area_inter < 0.6:
-                    print("人脸区域变化幅度太大，请复查，超出值为{}, frame_num: {}".format(face_area_inter, frame_index))
-                    pts_3d = -2
-                    break
-            face_rect_list.append(rect)
-            x_min = int(rect[0] * vid_width)
-            y_min = int(rect[2] * vid_height)
-            x_max = int(rect[1] * vid_width)
-            y_max = int(rect[3] * vid_height)
-            # frame_face = frame[y_min:y_max, x_min:x_max]
-            # print(y_min, y_max, x_min, x_max)
-            # cv2.imshow("s", frame_face)
-            # cv2.waitKey(10)
-        else:
-            x_min, y_min, x_max, y_max = face_rect
+        if frame_index == 0:
+            # 检测人脸
+            tag_, rect = detect_face(frame, min_detection_confidence = 0.25)
+            if tag_ != 1:
+                tag_, rect = detect_face(frame[int(0.1 * vid_height):int(0.9 * vid_height),
+                                         int(0.1 * vid_width):int(0.9 * vid_width)], min_detection_confidence=0.25)
+                assert tag_ == 1, "第一帧检测不到人脸"
+                x_min = int(rect[0] * vid_width + 0.1 * vid_width)
+                y_min = int(rect[2] * vid_height + 0.1 * vid_height)
+                x_max = int(rect[1] * vid_width + 0.1 * vid_width)
+                y_max = int(rect[3] * vid_height + 0.1 * vid_height)
+            else:
+                x_min = int(rect[0] * vid_width)
+                y_min = int(rect[2] * vid_height)
+                x_max = int(rect[1] * vid_width)
+                y_max = int(rect[3] * vid_height)
+            y_mid = (y_min + y_max) / 2.
+            x_mid = (x_min + x_max) / 2.
+            len_ = max(x_max - x_min, y_max - y_min)
+            face_rect = [x_mid - len_, y_mid - len_, x_mid + len_, y_mid + len_]
+
+        x_min, y_min, x_max, y_max = face_rect
         seq_w, seq_h = x_max - x_min, y_max - y_min
         x_mid, y_mid = (x_min + x_max) / 2, (y_min + y_max) / 2
-        # x_min = int(max(0, x_mid - seq_w * 0.65))
-        # y_min = int(max(0, y_mid - seq_h * 0.4))
-        # x_max = int(min(vid_width, x_mid + seq_w * 0.65))
-        # y_max = int(min(vid_height, y_mid + seq_h * 0.8))
         crop_size = int(max(seq_w * 1.35, seq_h * 1.35))
         x_min = int(max(0, x_mid - crop_size * 0.5))
         y_min = int(max(0, y_mid - crop_size * 0.45))
@@ -160,7 +148,7 @@ def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520]):
     cap = cv2.VideoCapture(video_out_path)
     frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
     cap.release()
-    print("正向视频帧数：", frames)
+    print("视频帧数：", frames)
     pts_3d = ExtractFromVideo(video_out_path, face_rect)
     if type(pts_3d) is np.ndarray and len(pts_3d) == frames:
         print("关键点已提取")
@@ -168,41 +156,12 @@ def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520]):
     with open(Path_output_pkl, "wb") as f:
         pickle.dump(pts_3d, f)
 
-def CirculateVideo(video_in_path, video_out_path, face_rect = [200,200,520,520]):
-    # 1 视频转换为25FPS, 并折叠循环拼接
-    front_video_path = "front.mp4"
-    back_video_path = "back.mp4"
-    # ffmpeg_cmd = "ffmpeg -i {} -r 25 -ss 00:00:00 -t 00:02:00 -an -loglevel quiet -y {}".format(video_in_path, front_video_path)
-    ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -loglevel quiet -y {}".format(video_in_path, front_video_path)
-    os.system(ffmpeg_cmd)
-
-    cap = cv2.VideoCapture(front_video_path)
-    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    cap.release()
-
-    ffmpeg_cmd = "ffmpeg -i {} -vf reverse -y {}".format(front_video_path, back_video_path)
-    os.system(ffmpeg_cmd)
-    ffmpeg_cmd = "ffmpeg -f concat -i {} -c:v copy -y {}".format("video_concat.txt", video_out_path)
-    os.system(ffmpeg_cmd)
-    print("正向视频帧数：", frames)
-    pts_3d = ExtractFromVideo(front_video_path, face_rect)
-    if type(pts_3d) is np.ndarray and len(pts_3d) == frames:
-        print("关键点已提取")
-    pts_3d = np.concatenate([pts_3d, pts_3d[::-1]], axis=0)
-    Path_output_pkl = video_out_path[:-4] + ".pkl"
-    with open(Path_output_pkl, "wb") as f:
-        pickle.dump(pts_3d, f)
-    cap = cv2.VideoCapture(video_out_path)
-    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    cap.release()
-    print("循环视频帧数：", frames)
-
 def data_preparation_mini(video_mouthOpen, video_mouthClose, video_dir_path):
     new_data_path = os.path.join(video_dir_path, "data")
     os.makedirs(new_data_path, exist_ok=True)
     video_out_path = "{}/circle.mp4".format(new_data_path)
     # CirculateVideo(video_mouthClose, video_out_path, face_rect=[290, 190, 440, 350])
-    CirculateVideo(video_mouthClose, video_out_path, face_rect=None)
+    PrepareVideo(video_mouthClose, video_out_path, face_rect=None)
     video_out_path = "{}/ref.mp4".format(new_data_path)
     PrepareVideo(video_mouthOpen, video_out_path, face_rect=None)
 

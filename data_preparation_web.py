@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import sys
 import os
-import math
+import gzip
 from talkingface.data.few_shot_dataset import get_image
 import shutil
 from talkingface.utils import crop_mouth, main_keypoints_index, smooth_array
@@ -102,19 +102,6 @@ def step2_generate_obj(list_source_crop_rect, list_standard_v, out_path):
         json_data.append({"rect": source_crop_rect.tolist(), "points": standard_v_rounded})
         # print(json_data)
         # break
-    # for frame_index in range(len(list_source_crop_rect)):
-    #     source_crop_rect = list_source_crop_rect[frame_index]
-    #     standard_v = list_standard_v[frame_index]
-    #
-    #     standard_v = standard_v[index_wrap, :2].flatten().tolist()
-    #     mat = mat_list[frame_index].T.flatten().tolist()
-    #     # 将 standard_v 中所有元素四舍五入到两位小数
-    #     standard_v_rounded = [round(i, 5) for i in mat]
-    #     json_data.append(standard_v_rounded)
-    #     # break
-    # import pandas as pd
-    # pd.DataFrame(json_data).to_csv("sss21.csv")
-    # exit()
     with open(os.path.join(out_path, "json_data.json"), "w") as f:
         json.dump(json_data, f)
 
@@ -158,14 +145,105 @@ def step3_generate_ref_tensor(video_path, out_path):
 
     np.savetxt(os.path.join(out_path, 'ref_data.txt'), ref_in_feature, fmt='%.8f')
 
+def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path):
+    from mini_live.obj.obj_utils import generateRenderInfo, generateWrapModel
+    from talkingface.run_utils import calc_face_mat
+    from mini_live.obj.utils import INDEX_MP_LIPS
+    from mini_live.obj.wrap_utils import newWrapModel
+    from talkingface.render_model_mini import RenderModel_Mini
+
+    # Step 2: Generate face3D.obj data
+    render_verts, render_face = generateRenderInfo()
+    face_pts_mean = render_verts[:478, :3].copy()
+
+    wrapModel_verts, wrapModel_face = generateWrapModel()
+    mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
+
+    face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.5 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.5
+
+    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
+
+    face3D_data = []
+    for i in face_wrap_entity:
+        face3D_data.append("v {:.3f} {:.3f} {:.3f} {:.02f} {:.0f}\n".format(i[0], i[1], i[2], i[3], i[4]))
+    for i in range(len(wrapModel_face) // 3):
+        face3D_data.append("f {0} {1} {2}\n".format(wrapModel_face[3 * i] + 1, wrapModel_face[3 * i + 1] + 1,
+                                                   wrapModel_face[3 * i + 2] + 1))
+
+    # Step 3: Generate ref_data.txt data
+    renderModel_mini = RenderModel_Mini()
+    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
+
+    Path_output_pkl = "{}/ref.pkl".format(video_path)
+    with open(Path_output_pkl, "rb") as f:
+        ref_images_info = pickle.load(f)
+
+    video_path = "{}/ref.mp4".format(video_path)
+    cap = cv2.VideoCapture(video_path)
+    vid_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    vid_width_ref = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    vid_height_ref = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    list_standard_img_ref = []
+    list_standard_v_ref = []
+    standard_size = 128
+    for frame_index in range(min(vid_frame_count, len(ref_images_info))):
+        ret, frame = cap.read()
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        source_pts = ref_images_info[frame_index]
+        source_crop_rect = crop_mouth(source_pts[main_keypoints_index], vid_width_ref, vid_height_ref)
+
+        standard_img = get_image(frame, source_crop_rect, input_type="image", resize=standard_size)
+        standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
+        list_standard_img_ref.append(standard_img)
+        list_standard_v_ref.append(standard_v)
+    cap.release()
+
+    renderModel_mini.reset_charactor(list_standard_img_ref, np.array(list_standard_v_ref)[:, main_keypoints_index], standard_size=standard_size)
+
+    ref_in_feature = renderModel_mini.net.infer_model.ref_in_feature
+    ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten()
+
+    # 保留两位小数
+    rounded_array = np.round(ref_in_feature, 6)
+
+    # Combine all data into a single JSON object
+    combined_data = {
+        "uid": "matesx_" + str(uuid.uuid4()),
+        "frame_num": len(list_standard_v),
+        "face3D_obj": face3D_data,
+        "ref_data": rounded_array.tolist(),
+        "json_data": [],
+        "authorized": False,
+    }
+
+    for frame_index in range(len(list_source_crop_rect)):
+        source_crop_rect = list_source_crop_rect[frame_index]
+        standard_v = list_standard_v[frame_index]
+
+        standard_v = standard_v[index_wrap, :2].flatten().tolist()
+        mat = mat_list[frame_index].T.flatten().tolist()
+        standard_v_rounded = [round(i, 5) for i in mat] + [round(i, 1) for i in standard_v]
+        combined_data["json_data"].append({"rect": source_crop_rect.tolist(), "points": standard_v_rounded})
+
+    # with open(os.path.join(out_path, "combined_data.json"), "w") as f:
+    #     json.dump(combined_data, f)
+
+    # Save as Gzip compressed JSON
+    output_file = os.path.join(out_path, "combined_data.json.gz")
+    with gzip.open(output_file, 'wt', encoding='UTF-8') as f:
+        json.dump(combined_data, f)
+
 def data_preparation_web(path):
     video_path = os.path.join(path, "data")
     out_path = os.path.join(path, "assets")
     os.makedirs(out_path, exist_ok=True)
     pts_3d, vid_width,vid_height = step0_keypoints(video_path, out_path)
     list_source_crop_rect, list_standard_v = step1_crop_mouth(pts_3d, vid_width, vid_height)
-    step2_generate_obj(list_source_crop_rect, list_standard_v, out_path)
-    step3_generate_ref_tensor(video_path, out_path)
+    # step2_generate_obj(list_source_crop_rect, list_standard_v, out_path)
+    # step3_generate_ref_tensor(video_path, out_path)
+    generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path)
 
 def main():
     # 检查命令行参数的数量

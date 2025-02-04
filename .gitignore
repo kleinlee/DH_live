@@ -1,2 +1,13 @@
 **/__pycache__
 /checkpoint/
+/mini_live/pt/
+/web_demo_authorized/
+
+# 忽略 video_data 文件夹下的所有内容
+video_data/*
+!video_data/000001/
+!video_data/000002/
+!video_data/test/
+!video_data/audio0.wav
+!video_data/audio1.wav
+!video_data/demo.mp4

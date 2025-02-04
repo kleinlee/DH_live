@@ -24,17 +24,13 @@ const getExtradata = () => {
 
 mp4box.onReady = function (info) {
     videoTrack = info.videoTracks[0];
-
     if (videoTrack != null) {
         mp4box.setExtractionOptions(videoTrack.id, 'video');
     }
-
     const videoW = videoTrack.track_width;
     const videoH = videoTrack.track_height;
-
     canvas_video.width = videoW;
     canvas_video.height = videoH;
-
     videoDecoder = new VideoDecoder({
         output: (videoFrame) => {
             createImageBitmap(videoFrame).then((img) => {
@@ -44,22 +40,27 @@ mp4box.onReady = function (info) {
                     timestamp: videoFrame.timestamp
                 });
                 videoFrame.close();
+
+                // 检查是否所有帧都已处理完成
+                if (videoFrames.length === nbSampleTotal) {
+                    // 将 videoFrames 的内容逆序并加到原列表后面
+                    const reversedFrames = videoFrames.slice().reverse();
+                    videoFrames.push(...reversedFrames);
+                    console.log('VideoFrames after adding reversed content:', videoFrames.length, 'frames.');
+                }
             });
         },
         error: (err) => {
             console.error('videoDecoder错误：', err);
         }
     });
-
     nbSampleTotal = videoTrack.nb_samples;
-
     videoDecoder.configure({
         codec: videoTrack.codec,
         codedWidth: videoW,
         codedHeight: videoH,
         description: getExtradata()
     });
-
     mp4box.start();
 };
 
@@ -139,55 +140,6 @@ window.addEventListener('message', function (event) {
     processVideoFrames();
 });
 
-async function loadRefData() {
-    const response = await fetch('assets/ref_data.txt');
-    if (!response.ok) {
-        throw new Error('Network response was not ok ' + response.statusText);
-    }
-    const fileContent = await response.text();
-    var refData = fileContent.split('\n').map(line => parseFloat(line.trim()));
-    const expectedSize = 18 * 14 * 20;
-    refData = refData.slice(0, expectedSize);
-    const refDataSize = refData.length;
-    if (refDataSize !== expectedSize) {
-        throw new Error(`Invalid refData size: expected ${expectedSize}, got ${refData.length}`);
-    }
-    console.log(refData.length, refData)
-    // Convert refData to Float32Array
-    const floatArray = new Float32Array(refData);
-    const floatArrayBytes = floatArray.byteLength;
-
-    var refDataPtr = Module._malloc(floatArrayBytes);
-    Module.HEAPF32.set(floatArray, refDataPtr / 4);
-    Module._setRefData(refDataPtr, floatArrayBytes);
-//    Module._free(refDataPtr);
-}
-
-// 加载JSON数据
-async function loadJsonData() {
-    try {
-        const response = await fetch('assets/json_data.json');
-        if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-        }
-        dataSets = await response.json();
-        console.log('Data loaded successfully:', dataSets.length, 'sets.');
-    } catch (error) {
-        console.error('Error loading the file:', error);
-    }
-}
-
-// 加载OBJ文件
-async function loadObjFile(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error('Network response was not ok ' + response.statusText);
-    }
-    const text = await response.text();
-    const { vertices, faces } = parseObjFile(text);
-    return { vertices, faces };
-}
-
 // 解析OBJ文件
 function parseObjFile(text) {
     const vertices = [];
@@ -212,11 +164,65 @@ function parseObjFile(text) {
     return { vertices, faces };
 }
 
-async function init_gl() {
-    loadJsonData();
-    loadRefData();
-    objData = await loadObjFile('assets/face3D.obj');
+async function loadCombinedData() {
+    try {
+        // 从服务器加载 Gzip 压缩的 JSON 文件
+        const response = await fetch('assets/combined_data.json.gz');
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
 
+        let combinedData;
+//        if (isGzip)
+        {
+            // 如果响应头包含 gzip，但浏览器没有自动解压，手动解压
+            const compressedData = await response.arrayBuffer();
+            const decompressedData = pako.inflate(new Uint8Array(compressedData), { to: 'string' });
+            combinedData = JSON.parse(decompressedData);
+        }
+
+        // 剔除 json_data 字段
+        let { json_data, ...WasmInputJson } = combinedData;
+
+        let jsonString = JSON.stringify(WasmInputJson);
+        // 分配内存
+        // 使用 TextEncoder 计算 UTF-8 字节长度
+        function getUTF8Length(str) {
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(str);
+            return encoded.length + 1; // +1 是为了包含 null 终止符
+        }
+        let lengthBytes = getUTF8Length(jsonString);
+
+        let stringPointer = Module._malloc(lengthBytes);
+        Module.stringToUTF8(jsonString, stringPointer, lengthBytes);
+//        Module["asm"]["stringToUTF8"](jsonString, stringPointer, lengthBytes);
+        console.log("Module._processJson");
+        Module._processJson(stringPointer);
+
+        // 释放内存
+        Module._free(stringPointer);
+
+        // 提取 jsonData
+        dataSets = combinedData.json_data;
+        console.log('JSON data loaded successfully:', dataSets.length, 'sets.');
+
+        // 将 dataSets 的内容逆序并加到原列表后面
+        dataSets = dataSets.concat(dataSets.slice().reverse());
+        console.log('DataSets after adding reversed content:', dataSets.length, 'sets.');
+
+        // 提取 objData
+        objData = parseObjFile(combinedData.face3D_obj.join('\n'));
+        console.log('OBJ data loaded successfully:', objData.vertices.length, 'vertices,', objData.faces.length, 'faces.');
+    } catch (error) {
+        console.error('Error loading the combined data:', error);
+        throw error;
+    }
+}
+
+async function init_gl() {
+    // 加载 combined_data.json.gz
+    await loadCombinedData();
     {
         // WebGL Shaders
         const vertexShaderSource = `#version 300 es
@@ -393,7 +399,7 @@ async function processVideoFrames() {
     ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
     processDataSet(index);
 
-    console.log("draw", index, duration, timestamp);
+//    console.log("draw", index, duration, timestamp);
     index++;
 
     const currentTime = performance.now();
@@ -408,7 +414,7 @@ async function processDataSet(currentDataSetIndex) {
     const rect = dataSet.rect;
 
     const currentpoints = dataSets[currentDataSetIndex].points;
-    console.log("video.currentTime 1111", currentDataSetIndex);
+//    console.log("video.currentTime 1111", currentDataSetIndex);
 
     let points = currentpoints;
 
@@ -427,7 +433,7 @@ async function processDataSet(currentDataSetIndex) {
     const bsArray = new Float32Array(Module.HEAPU8.buffer, bsPtr, 12);
 
     render(matrix, subPoints, bsArray);
-    console.log("bsArray", bsArray);
+//    console.log("bsArray", bsArray);
     resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, 128, 128);
 
     const imageData = resizedCtx.getImageData(0, 0, 128, 128);
