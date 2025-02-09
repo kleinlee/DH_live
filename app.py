@@ -155,7 +155,9 @@ def create_interface():
         # 第四部分：商业授权和更新
         gr.Markdown("## 第四部分：完整服务与更新")
         gr.Markdown("""
-                - 可访问www.matesx.com体验完整服务。
+                - 可访问www.matesx.com 体验完整服务。
+                - 商业授权（去除logo）：访问www.matesx.com/authorized.html, 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
+                - 人物切换：已开放功能，可自己整改，官方后续会完善。
                 - 未来12个月会持续更新效果，可以关注公众号”Mates数字生命“获取即时动态。
                 """)
 

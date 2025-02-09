@@ -107,25 +107,6 @@ async def eb_stream(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.post("/eb_stream")    # 前端调用的path
-# async def eb_stream(request: Request):
-#     body = await request.json()
-#     input_mode = body.get("input_mode")
-#     prompt = body.get("prompt")
-#     voice_speed = body.get("voice_speed")
-#     voice_id = body.get("voice_id")
-#     voice_speed = voice_speed if voice_speed != "" else None
-#     voice_id = voice_id if voice_id != "" else None
-#
-#     if input_mode == "audio":
-#         prompt = call_asr_api(prompt)
-#         return StreamingResponse(gen_stream(prompt, asr=True, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
-#     elif input_mode == "text":
-#         return StreamingResponse(gen_stream(prompt, asr=False, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
-#     else:
-#         pass
-#         # 需要补全
-
 # 启动Uvicorn服务器
 if __name__ == "__main__":
     import uvicorn
