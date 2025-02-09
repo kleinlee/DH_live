@@ -61,12 +61,13 @@
         /* 居中显示“请点击开始” */
         #startMessage {
             position: absolute;
-            top: 50%;
+            top: 60%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 24px;
             font-weight: bold;
             color: #333;
+            z-index: -2;
         }
     </style>
 
@@ -84,12 +85,12 @@
     <div id="screen"></div>
     <iframe id="screen2" src="dialog.html" frameborder="0" style="display: none;"></iframe>
     <!-- 添加“请点击开始”的元素 -->
-    <div id="startMessage">请点击开始按钮</div>
+    <div id="startMessage">加载中</div>
     <script src="js/pako.min.js"></script>
     <script src="js/mp4box.all.min.js"></script>
     <script src="js/gl-matrix-min.js"></script>
-    <script src="js/MiniLive2.js"></script>
     <script src="js/DHLiveMini.js"></script>
     <script src="js/MiniMateLoader.js"></script>
+    <script src="js/MiniLive2.js"></script>
   </body>
 </html>

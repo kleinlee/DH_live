@@ -3,10 +3,9 @@ import requests
 import asyncio
 import re
 import base64
-from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-
+from fastapi import FastAPI, Request, UploadFile, File,HTTPException
 app = FastAPI()
 
 # 挂载静态文件
@@ -47,10 +46,17 @@ def split_sentence(sentence, min_length=10):
         sentences.append(current)
     return sentences
 
-async def gen_stream(prompt, voice_speed=None, voice_id=None):
-    # 访问对话大模型
+
+import asyncio
+async def gen_stream(prompt, asr = False, voice_speed=None, voice_id=None):
+    print("XXXXXXXXX", voice_speed, voice_id)
+    if asr:
+        chunk = {
+            "prompt": prompt
+        }
+        yield f"{json.dumps(chunk)}\n"  # 使用换行符分隔 JSON 块
+
     text_cache = llm_answer(prompt)
-    # 对长文本进行切分，切分后的短文本依次进行语音生成并发送，以此保证流式快速响应
     sentences = split_sentence(text_cache)
 
     for index_, sub_text in enumerate(sentences):
@@ -64,15 +70,61 @@ async def gen_stream(prompt, voice_speed=None, voice_id=None):
         yield f"{json.dumps(chunk)}\n"  # 使用换行符分隔 JSON 块
         await asyncio.sleep(0.2)  # 模拟异步延迟
 
+# 处理 ASR 和 TTS 的端点
+@app.post("/process_audio")
+async def process_audio(file: UploadFile = File(...)):
+    # 模仿调用 ASR API 获取文本
+    text = "语音已收到，这里只是模仿，真正对话需要您自己设置ASR服务。"
+    # 调用 TTS 生成流式响应
+    return StreamingResponse(gen_stream(text, asr=True), media_type="application/json")
+
+
+async def call_asr_api(audio_data):
+    # 调用ASR完成语音识别
+    answer = "语音已收到，这里只是模仿，真正对话需要您自己设置ASR服务。"
+    return answer
+
 @app.post("/eb_stream")    # 前端调用的path
 async def eb_stream(request: Request):
-    body = await request.json()
-    prompt = body.get("prompt")
-    voice_speed = body.get("voice_speed")
-    voice_id = body.get("voice_id")
-    voice_speed = voice_speed if voice_speed != "" else None
-    voice_id = voice_id if voice_id != "" else None
-    return StreamingResponse(gen_stream(prompt, voice_speed, voice_id), media_type="application/json")
+    try:
+        body = await request.json()
+        input_mode = body.get("input_mode")
+        voice_speed = body.get("voice_speed")
+        voice_id = body.get("voice_id")
+
+        if input_mode == "audio":
+            base64_audio = body.get("audio")
+            # 解码 Base64 音频数据
+            audio_data = base64.b64decode(base64_audio)
+            # 这里可以添加对音频数据的处理逻辑
+            prompt = await call_asr_api(audio_data)  # 假设 call_asr_api 可以处理音频数据
+            return StreamingResponse(gen_stream(prompt, asr=True, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
+        elif input_mode == "text":
+            prompt = body.get("prompt")
+            return StreamingResponse(gen_stream(prompt, asr=False, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
+        else:
+            raise HTTPException(status_code=400, detail="Invalid input mode")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# @app.post("/eb_stream")    # 前端调用的path
+# async def eb_stream(request: Request):
+#     body = await request.json()
+#     input_mode = body.get("input_mode")
+#     prompt = body.get("prompt")
+#     voice_speed = body.get("voice_speed")
+#     voice_id = body.get("voice_id")
+#     voice_speed = voice_speed if voice_speed != "" else None
+#     voice_id = voice_id if voice_id != "" else None
+#
+#     if input_mode == "audio":
+#         prompt = call_asr_api(prompt)
+#         return StreamingResponse(gen_stream(prompt, asr=True, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
+#     elif input_mode == "text":
+#         return StreamingResponse(gen_stream(prompt, asr=False, voice_speed=voice_speed, voice_id=voice_id), media_type="application/json")
+#     else:
+#         pass
+#         # 需要补全
 
 # 启动Uvicorn服务器
 if __name__ == "__main__":

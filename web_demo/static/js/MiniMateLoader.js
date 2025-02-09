@@ -17,7 +17,7 @@ async function init()
                         containerElements: [screen],
                     }
                 });
-            await init_gl();
+            await newVideoTask();
             document.getElementById('screen2').style.display = 'block';
 }
 

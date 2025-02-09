@@ -19,11 +19,11 @@ css = """
 
 video_dir_path = ""
 # 假设你已经有了这两个函数
-def data_preparation(video1, video2):
+def data_preparation(video1, video2, resize_option):
     global video_dir_path
     # 处理视频的逻辑
     video_dir_path = "video_data/{}".format(uuid.uuid4())
-    data_preparation_mini(video1, video2, video_dir_path)
+    data_preparation_mini(video1, video2, video_dir_path, resize_option)
     data_preparation_web(video_dir_path)
 
     return "视频处理完成，保存至目录{}".format(video_dir_path)
@@ -57,7 +57,7 @@ def launch_server():
     # 启动 server.py
     subprocess.Popen(["python", "web_demo/server.py"])
 
-    return "访问 http://localhost:8888/static/MiniLive.html"
+    return "访问 http://localhost:8888/static/MiniLive_new.html"
 
 # 定义 Gradio 界面
 def create_interface():
@@ -76,6 +76,8 @@ def create_interface():
                 video2 = gr.Video(label="上传静默视频", elem_id="video-output")
             with gr.Column():
                 video1 = gr.Video(label="上传说话视频", elem_id="video-output")
+        # 增加可选项
+        resize_option = gr.Checkbox(label="是否转为最高720P（适配手机）", value=True)
         process_button = gr.Button("处理视频")
         process_output = gr.Textbox(label="处理结果")
 
@@ -102,34 +104,64 @@ def create_interface():
 
         # 第三部分：启动网页
         gr.Markdown("## 第三部分：启动网页")
+        launch_button = gr.Button("启动网页")
+        launch_output = gr.Textbox(label="启动结果")
         gr.Markdown("""
         - 点击“启动网页”按钮后，会启动 `server.py`，提供一个模拟对话服务。
-        - 在 `static/js/dialog.js` 文件中，找到第 35 行，将 `http://localhost:8888/eb_stream` 替换为您自己的对话服务网址。例如：
+        - 在 `static/js/dialog.js` 文件中，找到第 1 行，将 server_url=`http://localhost:8888/eb_stream` 替换为您自己的对话服务网址。例如：
           ```bash
           https://your-dialogue-service.com/eb_stream
           ```
         - `server.py` 提供了一个模拟对话服务的示例。它接收 JSON 格式的输入，并流式返回 JSON 格式的响应。
-        - 示例输入 JSON：
-          ```bash
-          {
-              "prompt": "用户输入的对话内容"
-          }
-          ```
-        - 示例输出 JSON（流式返回）：
-          ```bash
-          {
-              "text": "返回的部分对话文本",
-              "audio": "base64编码的音频数据",
-              "endpoint": false  // 是否为对话的最后一个片段，true表示结束
-          }
-          ```
+        # API 接口说明
+
+## 输入 JSON 格式
+
+| 字段名       | 必填 | 类型   | 说明                                                                 | 默认值 |
+|--------------|------|--------|----------------------------------------------------------------------|--------|
+| `input_mode` | 是   | 字符串 | 输入模式，可选值为 `"text"` 或 `"audio"`，分别对应文字对话和语音对话输入 | "audio"     |
+| `prompt`     | 条件 | 字符串 | 当 `input_mode` 为 `"text"` 时必填，表示用户输入的对话内容           | 无     |
+| `audio`      | 条件 | 字符串 | 当 `input_mode` 为 `"audio"` 时必填，表示 Base64 编码的音频数据      | 无     |
+| `voice_speed`| 否   | 字符串 | TTS 语速，可选                                                     | ""     |
+| `voice_id`   | 否   | 字符串 | TTS 音色，可选                                                     | ""     |
+
+## 输出 JSON 格式（流式返回）
+
+| 字段名     | 必填 | 类型   | 说明                                                                 | 默认值   |
+|------------|------|--------|----------------------------------------------------------------------|----------|
+| `text`     | 是   | 字符串 | 返回的部分对话文本                                                  | 无       |
+| `audio`    | 否   | 字符串 | Base64 编码的音频数据，可选                                         | 无       |
+| `endpoint` | 是   | 布尔   | 是否为对话的最后一个片段，`true` 表示结束                           | `false`  |
+
+---
+
+#### 输入输出示例
+```json
+{
+    "input_mode": "text",
+    "prompt": "你好，今天天气怎么样？",
+    "voice_speed": "",
+    "voice_id": ""
+}
+输出
+{
+    "text": "今天天气晴朗，温度适宜。",
+    "audio": "SGVsbG8sIFdvcm...",
+    "endpoint": false
+}
+```
         - **注意**：本项目使用了 WebCodecs API，该 API 仅在安全上下文（HTTPS 或 localhost）中可用。因此，在部署或测试时，请确保您的网页在 HTTPS 环境下运行，或者使用 localhost 进行本地测试。
         """)
-        launch_button = gr.Button("启动网页")
-        launch_output = gr.Textbox(label="启动结果")
+        # 第四部分：商业授权和更新
+        gr.Markdown("## 第四部分：完整服务与更新")
+        gr.Markdown("""
+                - 可访问www.matesx.com体验完整服务。
+                - 未来12个月会持续更新效果，可以关注公众号”Mates数字生命“获取即时动态。
+                """)
+
 
         # 绑定按钮点击事件
-        process_button.click(data_preparation, inputs=[video1, video2], outputs=process_output)
+        process_button.click(data_preparation, inputs=[video1, video2, resize_option], outputs=process_output)
         generate_button.click(demo_mini, inputs=audio, outputs=video_output)
         launch_button.click(launch_server, outputs=launch_output)
 

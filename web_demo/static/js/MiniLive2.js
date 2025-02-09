@@ -1,102 +1,162 @@
-// video 读取，使用MP4Box方式读取原始视频帧，才能和cv2读取保持完全一致
-const mp4url = 'assets/01.mp4';
+class VideoProcessor {
+    constructor() {
+        this.mp4box = MP4Box.createFile();
+        this.videoTrack = null;
+        this.videoDecoder = null;
+        this.videoFrames = [];
+        this.nbSampleTotal = 0;
+        this.countSample = 0;
+        this.isReverseAdded = false;
 
-const mp4box = MP4Box.createFile();
-let videoTrack = null;
-let videoDecoder = null;
-const videoFrames = [];
-let nbSampleTotal = 0;
-let countSample = 0;
+        // 绑定事件处理函数
+        this.mp4box.onReady = this.handleReady.bind(this);
+        this.mp4box.onSamples = this.handleSamples.bind(this);
 
-let index = 0;
-let lastTime = performance.now(); // 记录上一次绘制的时间戳
-const frameInterval = 40; // 每帧的时间间隔（40ms对应25fps）
-
-const getExtradata = () => {
-    const entry = mp4box.moov.traks[0].mdia.minf.stbl.stsd.entries[0];
-    const box = entry.avcC ?? entry.hvcC ?? entry.vpcC;
-    if (box != null) {
-        const stream = new DataStream(undefined, 0, DataStream.BIG_ENDIAN);
-        box.write(stream);
-        return new Uint8Array(stream.buffer.slice(8));
+        this.combinedData = null;
     }
-};
 
-mp4box.onReady = function (info) {
-    videoTrack = info.videoTracks[0];
-    if (videoTrack != null) {
-        mp4box.setExtractionOptions(videoTrack.id, 'video');
-    }
-    const videoW = videoTrack.track_width;
-    const videoH = videoTrack.track_height;
-    canvas_video.width = videoW;
-    canvas_video.height = videoH;
-    videoDecoder = new VideoDecoder({
-        output: (videoFrame) => {
-            createImageBitmap(videoFrame).then((img) => {
-                videoFrames.push({
-                    img,
-                    duration: videoFrame.duration,
-                    timestamp: videoFrame.timestamp
-                });
-                videoFrame.close();
-
-                // 检查是否所有帧都已处理完成
-                if (videoFrames.length === nbSampleTotal) {
-                    // 将 videoFrames 的内容逆序并加到原列表后面
-                    const reversedFrames = videoFrames.slice().reverse();
-                    videoFrames.push(...reversedFrames);
-                    console.log('VideoFrames after adding reversed content:', videoFrames.length, 'frames.');
-                }
-            });
-        },
-        error: (err) => {
-            console.error('videoDecoder错误：', err);
+    async init(videoUrl, gzipUrl) {
+        // 清空旧数据
+        this.videoFrames = [];
+        this.countSample = 0;
+        this.isReverseAdded = false;
+        this.combinedData = null;
+        // 重置 MP4Box
+        if (this.mp4box) {
+            this.mp4box.stop(); // 停止解析
+            this.mp4box.flush(); // 清空缓冲区
+            this.mp4box = null; // 销毁旧实例
         }
-    });
-    nbSampleTotal = videoTrack.nb_samples;
-    videoDecoder.configure({
-        codec: videoTrack.codec,
-        codedWidth: videoW,
-        codedHeight: videoH,
-        description: getExtradata()
-    });
-    mp4box.start();
-};
+        this.mp4box = MP4Box.createFile(); // 创建新实例
 
-mp4box.onSamples = function (trackId, ref, samples) {
-    if (videoTrack.id === trackId) {
-        mp4box.stop();
+        // 重新绑定事件处理函数
+        this.mp4box.onReady = this.handleReady.bind(this);
+        this.mp4box.onSamples = this.handleSamples.bind(this);
+        await this.fetchVideo(videoUrl);
+        await this.fetchVideoUtilData(gzipUrl);
+    }
 
-        countSample += samples.length;
+    async fetchVideo(url) {
+        const response = await fetch(url);
+        const buffer = await response.arrayBuffer();
+        buffer.fileStart = 0;
+        this.mp4box.appendBuffer(buffer);
+        this.mp4box.flush();
+    }
 
+    async fetchVideoUtilData(gzipUrl) {
+        // 从服务器加载 Gzip 压缩的 JSON 文件
+        const response = await fetch(gzipUrl);
+        const compressedData = await response.arrayBuffer();
+        const decompressedData = pako.inflate(new Uint8Array(compressedData), { to: 'string' });
+        this.combinedData = JSON.parse(decompressedData);
+    }
+
+
+    handleReady(info) {
+        this.videoTrack = info.videoTracks[0];
+        if (!this.videoTrack) return;
+
+        this.mp4box.setExtractionOptions(this.videoTrack.id, 'video', { nbSamples: 100 });
+        const { track_width: videoW, track_height: videoH } = this.videoTrack;
+
+        // 假设canvas_video已在外部定义
+        canvas_video.width = videoW;
+        canvas_video.height = videoH;
+
+        this.videoDecoder = new VideoDecoder({
+            output: this.handleVideoFrame.bind(this),
+            error: (e) => console.error("VideoDecoder error:", e)
+        });
+
+        this.nbSampleTotal = this.videoTrack.nb_samples;
+        this.videoDecoder.configure({
+            codec: this.videoTrack.codec,
+            codedWidth: videoW,
+            codedHeight: videoH,
+            description: this.getExtradata()
+        });
+
+        this.mp4box.start();
+    }
+
+    handleVideoFrame(videoFrame) {
+        createImageBitmap(videoFrame).then(img => {
+            this.videoFrames.push({
+                img,
+                duration: videoFrame.duration,
+                timestamp: videoFrame.timestamp
+            });
+            videoFrame.close();
+
+            // 添加逆序帧逻辑
+            if (this.videoFrames.length === this.nbSampleTotal && !this.isReverseAdded) {
+                this.videoFrames.push(...[...this.videoFrames].reverse());
+                this.isReverseAdded = true;
+                console.log(`Total frames: ${this.videoFrames.length}`);
+            }
+        });
+    }
+
+    handleSamples(trackId, ref, samples) {
+        if (trackId !== this.videoTrack?.id) return;
+
+        this.countSample += samples.length;
         for (const sample of samples) {
-            console.log('Sample duration:', sample); // 检查 duration 是否正确
-            const type = sample.is_sync ? 'key' : 'delta';
-
             const chunk = new EncodedVideoChunk({
-                type,
+                type: sample.is_sync ? "key" : "delta",
                 timestamp: sample.cts,
                 duration: sample.duration,
                 data: sample.data
             });
-
-            videoDecoder.decode(chunk);
+            this.videoDecoder.decode(chunk);
         }
 
-        if (countSample === nbSampleTotal) {
-            videoDecoder.flush();
+        if (this.countSample >= this.nbSampleTotal) {
+            this.videoDecoder.flush();
         }
     }
-};
 
-fetch(mp4url)
-    .then(res => res.arrayBuffer())
-    .then(buffer => {
-        buffer.fileStart = 0;
-        mp4box.appendBuffer(buffer);
-        mp4box.flush();
+    getExtradata() {
+        const trak = this.mp4box.moov.traks[0];
+        const entry = trak.mdia.minf.stbl.stsd.entries[0];
+        const box = entry.avcC || entry.hvcC || entry.vpcC;
+        if (!box) return;
+
+        const stream = new DataStream(undefined, 0, DataStream.BIG_ENDIAN);
+        box.write(stream);
+        return new Uint8Array(stream.buffer.slice(8));
+    }
+}
+
+let asset_dir = "assets";
+let isPaused = false; // 标志位，控制是否暂停处理
+// 初始化处理器
+const videoProcessor = new VideoProcessor();
+// 获取 characterDropdown 元素
+const characterDropdown = document.getElementById('characterDropdown');
+
+// 检查元素是否存在
+if (characterDropdown) {
+    characterDropdown.addEventListener('change', async function() {
+        isPaused = true;
+        document.getElementById('startMessage').style.display = 'block';
+        asset_dir = this.value;
+        console.log('Selected character:', asset_dir); // 这里应该是 asset_dir 而不是 selectedCharacter
+        await videoProcessor.init(asset_dir + "/01.mp4", asset_dir + "/combined_data.json.gz");
+        await loadCombinedData();
+        await setupVertsBuffers();
+        isPaused = false;
+        // 启动绘制循环
+        await processVideoFrames();
     });
+} else {
+    console.warn("characterDropdown 元素未找到，无法绑定事件监听器");
+}
+
+let frameIndex = 0;
+const frameInterval = 40;
+let lastFrameTime = performance.now();
 
 // 原始webgl渲染
 const canvas_gl = document.getElementById('canvas_gl');
@@ -120,6 +180,7 @@ let dataSets = [];
 
 let program;
 let indexBuffer;
+let positionBuffer;
 const texture_bs = gl.createTexture();
 var bs_array = new Float32Array(12);
 
@@ -128,17 +189,9 @@ const mat4 = glMatrix.mat4;
 let currentDataSetIndex;
 let lastDataSetIndex = -1;
 
-// 监听来自 iframe 的消息
-window.addEventListener('message', function (event) {
-    document.getElementById('startMessage').style.display = 'none';
-    if (!videoFrames.length) {
-        console.error('视频解码尚未完成，请稍等');
-        return;
-    }
-
-    // 启动绘制循环
-    processVideoFrames();
-});
+let imageDataPtr = null;
+let imageDataGlPtr = null;
+let bsPtr = null;
 
 // 解析OBJ文件
 function parseObjFile(text) {
@@ -166,23 +219,7 @@ function parseObjFile(text) {
 
 async function loadCombinedData() {
     try {
-        // 从服务器加载 Gzip 压缩的 JSON 文件
-        const response = await fetch('assets/combined_data.json.gz');
-        if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-        }
-
-        let combinedData;
-//        if (isGzip)
-        {
-            // 如果响应头包含 gzip，但浏览器没有自动解压，手动解压
-            const compressedData = await response.arrayBuffer();
-            const decompressedData = pako.inflate(new Uint8Array(compressedData), { to: 'string' });
-            combinedData = JSON.parse(decompressedData);
-        }
-
-        // 剔除 json_data 字段
-        let { json_data, ...WasmInputJson } = combinedData;
+        let { json_data, ...WasmInputJson } = videoProcessor.combinedData;
 
         let jsonString = JSON.stringify(WasmInputJson);
         // 分配内存
@@ -198,13 +235,15 @@ async function loadCombinedData() {
         Module.stringToUTF8(jsonString, stringPointer, lengthBytes);
 //        Module["asm"]["stringToUTF8"](jsonString, stringPointer, lengthBytes);
         console.log("Module._processJson");
+        console.log(jsonString);
+        console.log(lengthBytes);
         Module._processJson(stringPointer);
 
         // 释放内存
         Module._free(stringPointer);
 
         // 提取 jsonData
-        dataSets = combinedData.json_data;
+        dataSets = videoProcessor.combinedData.json_data;
         console.log('JSON data loaded successfully:', dataSets.length, 'sets.');
 
         // 将 dataSets 的内容逆序并加到原列表后面
@@ -212,7 +251,7 @@ async function loadCombinedData() {
         console.log('DataSets after adding reversed content:', dataSets.length, 'sets.');
 
         // 提取 objData
-        objData = parseObjFile(combinedData.face3D_obj.join('\n'));
+        objData = parseObjFile(videoProcessor.combinedData.face3D_obj.join('\n'));
         console.log('OBJ data loaded successfully:', objData.vertices.length, 'vertices,', objData.faces.length, 'faces.');
     } catch (error) {
         console.error('Error loading the combined data:', error);
@@ -220,10 +259,8 @@ async function loadCombinedData() {
     }
 }
 
+
 async function init_gl() {
-    // 加载 combined_data.json.gz
-    await loadCombinedData();
-    {
         // WebGL Shaders
         const vertexShaderSource = `#version 300 es
             layout(location = 0) in vec3 a_position;
@@ -326,8 +363,7 @@ async function init_gl() {
         gl.useProgram(program);
 
         // Set up vertex data
-        const positionLocation = gl.getAttribLocation(program, "a_position");
-        const positionBuffer = gl.createBuffer();
+        positionBuffer = gl.createBuffer();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(objData.vertices), gl.STATIC_DRAW);
@@ -349,10 +385,28 @@ async function init_gl() {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.bindTexture(gl.TEXTURE_2D, null);
+//            gl.bindTexture(gl.TEXTURE_2D, null);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.uniform1i(gl.getUniformLocation(program, 'texture_bs'), 0);
         };
         image.src = 'common/bs_texture_halfFace.png';
-    }
+}
+async function setupVertsBuffers() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(objData.vertices), gl.STATIC_DRAW);
+}
+
+async function newVideoTask() {
+    await videoProcessor.init("assets/01.mp4", "assets/combined_data.json.gz");
+    // 加载 combined_data.json.gz
+    await loadCombinedData();
+    await init_gl();
+    await setupVertsBuffers();
+    initMemory();
+    // 启动绘制循环
+    await processVideoFrames();
+    document.getElementById('startMessage').style.display = 'none';
 }
 
 function render(mat_world, subPoints, bsArray) {
@@ -377,10 +431,6 @@ function render(mat_world, subPoints, bsArray) {
     gl.clearColor(0.5, 0.5, 0.5, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture_bs);
-    gl.uniform1i(gl.getUniformLocation(program, 'texture_bs'), 0);
-
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -391,30 +441,47 @@ function render(mat_world, subPoints, bsArray) {
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels_fbo);
 }
 
-async function processVideoFrames() {
-    if (index >= videoFrames.length) {
-        index = 0; // 重新开始
-    }
-    const { img, duration, timestamp } = videoFrames[index];
-    ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
-    processDataSet(index);
 
-//    console.log("draw", index, duration, timestamp);
-    index++;
+
+async function processVideoFrames() {
+    if (isPaused) {
+        // 如果暂停，直接返回，不处理帧
+        return;
+    }
+    // 检查视频帧是否已经解码完成
+    if (videoProcessor.videoFrames.length === 0 || videoProcessor.videoFrames.length < videoProcessor.nbSampleTotal) {
+        console.log('Waiting for video frames to load...', videoProcessor.videoFrames.length, videoProcessor.nbSampleTotal);
+        setTimeout(processVideoFrames, 100); // 等待100毫秒后再次检查
+        return;
+    }
+    if (frameIndex >= videoProcessor.videoFrames.length) {
+        frameIndex = 0; // 重新开始
+    }
+    const { img, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
+    ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
+    processDataSet(frameIndex);
+    frameIndex++;
 
     const currentTime = performance.now();
-    const deltaTime = currentTime - lastTime;
+    const deltaTime = currentTime - lastFrameTime;
     const delay = Math.max(0, frameInterval - deltaTime);
-    lastTime = currentTime + delay;
+    lastFrameTime = currentTime + delay;
     setTimeout(processVideoFrames, delay);
 }
+
+async function initMemory() {
+    const imageDataSize = 128 * 128 * 4; // RGBA
+    imageDataPtr = Module._malloc(imageDataSize);
+    imageDataGlPtr = Module._malloc(imageDataSize);
+    bsPtr = Module._malloc(12 * 4); // 12 floats for blend shape
+}
+
 
 async function processDataSet(currentDataSetIndex) {
     const dataSet = dataSets[currentDataSetIndex];
     const rect = dataSet.rect;
 
     const currentpoints = dataSets[currentDataSetIndex].points;
-//    console.log("video.currentTime 1111", currentDataSetIndex);
 
     let points = currentpoints;
 
@@ -428,7 +495,6 @@ async function processDataSet(currentDataSetIndex) {
     );
 
     const subPoints = points.slice(16);
-    const bsPtr = allocateMemory(12 * 4);
     Module._updateBlendShape(bsPtr, 12 * 4);
     const bsArray = new Float32Array(Module.HEAPU8.buffer, bsPtr, 12);
 
@@ -437,10 +503,8 @@ async function processDataSet(currentDataSetIndex) {
     resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, 128, 128);
 
     const imageData = resizedCtx.getImageData(0, 0, 128, 128);
-    const imageDataPtr = allocateMemory(imageData.data.length);
     Module.HEAPU8.set(imageData.data, imageDataPtr);
 
-    const imageDataGlPtr = allocateMemory(pixels_fbo.length);
     Module.HEAPU8.set(pixels_fbo, imageDataGlPtr);
 
     Module._processImage(imageDataPtr, 128, 128, imageDataGlPtr, 128, 128);
@@ -449,20 +513,4 @@ async function processDataSet(currentDataSetIndex) {
 
     resizedCtx.putImageData(imageData, 0, 0);
     ctx_video.drawImage(resizedCanvas, 0, 0, 128, 128, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-
-    freeMemory(imageDataPtr);
-    freeMemory(imageDataGlPtr);
-    freeMemory(bsPtr);
-}
-
-function allocateMemory(size) {
-    const ptr = Module._malloc(size);
-    if (ptr === 0) throw new Error('Failed to allocate memory');
-    return ptr;
-}
-
-function freeMemory(ptr) {
-    if (ptr !== null && ptr !== 0) {
-        Module._free(ptr);
-    }
 }

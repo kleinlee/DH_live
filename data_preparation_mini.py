@@ -140,28 +140,43 @@ def ExtractFromVideo(video_path, face_rect=None):
     return pts_3d
 
 
-def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520]):
+def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520], resize_option = False):
     # 1 视频转换为25FPS
-    ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -loglevel quiet -y {}".format(video_in_path, video_out_path)
+    if resize_option:
+        cap = cv2.VideoCapture(video_in_path)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        scale = min(720 / width, 1280 / height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        # 确保新的宽高为偶数
+        new_width = new_width //2*2
+        new_height = new_height //2*2
+        cap.release()
+        # 补全 FFmpeg 命令
+        ffmpeg_cmd = "ffmpeg -i {} -vf \"scale={}:{}\" -r 25 -an -y {}".format(video_in_path, new_width, new_height,
+                                                                               video_out_path)
+    else:
+        ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -y {}".format(video_in_path, video_out_path)
     os.system(ffmpeg_cmd)
+    print(ffmpeg_cmd)
 
     cap = cv2.VideoCapture(video_out_path)
     frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
     cap.release()
     print("视频帧数：", frames)
     pts_3d = ExtractFromVideo(video_out_path, face_rect)
-    if type(pts_3d) is np.ndarray and len(pts_3d) == frames:
-        print("关键点已提取")
+    assert type(pts_3d) is np.ndarray and len(pts_3d) == frames,"关键点已提取"
     Path_output_pkl = video_out_path[:-4] + ".pkl"
     with open(Path_output_pkl, "wb") as f:
         pickle.dump(pts_3d, f)
 
-def data_preparation_mini(video_mouthOpen, video_mouthClose, video_dir_path):
+def data_preparation_mini(video_mouthOpen, video_mouthClose, video_dir_path, resize_option = False):
     new_data_path = os.path.join(video_dir_path, "data")
     os.makedirs(new_data_path, exist_ok=True)
     video_out_path = "{}/circle.mp4".format(new_data_path)
     # CirculateVideo(video_mouthClose, video_out_path, face_rect=[290, 190, 440, 350])
-    PrepareVideo(video_mouthClose, video_out_path, face_rect=None)
+    PrepareVideo(video_mouthClose, video_out_path, face_rect=None, resize_option = resize_option)
     video_out_path = "{}/ref.mp4".format(new_data_path)
     PrepareVideo(video_mouthOpen, video_out_path, face_rect=None)
 

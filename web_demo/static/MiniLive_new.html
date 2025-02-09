@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <link rel="icon" href="common/favicon.ico" type="image/x-icon">
+    <title>MiniLive</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+
+        video, canvas {
+            border: 2px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #canvas_video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #canvas_gl {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 128px;
+            height: 128px;
+        }
+
+        #screen {
+            position: absolute;
+            bottom: -1000;
+            right: -1000;
+            width: 1px;
+            height: 1px;
+        }
+
+        #screen2 {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            z-index: 5;
+        }
+
+        #startMessage {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: -2;
+        }
+
+        #dropdownContainer, #voiceDropdownContainer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        #voiceDropdownContainer {
+            top: 70px;
+        }
+
+        #characterDropdown, #voiceDropdown {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding: 10px 40px 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #characterDropdown:hover, #voiceDropdown:hover {
+            border-color: #888;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #characterDropdown:focus, #voiceDropdown:focus {
+            border-color: #555;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #dropdownContainer::after, #voiceDropdownContainer::after {
+            content: '▼';
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="dropdownContainer">
+        <select id="characterDropdown">
+            <option value="assets">男性一</option>
+            <option value="assets2">男性二</option>
+            <!-- <option value="assets3">女性1</option> -->
+            <!-- <option value="assets4">女性2</option> -->
+        </select>
+    </div>
+    <div id="voiceDropdownContainer">
+        <select id="voiceDropdown">
+            <option value="male-qn-qingse">青涩男</option>
+            <option value="male-qn-badao">霸气男</option>
+            <option value="wumei_yujie">妩媚女</option>
+            <option value="female-tianmei">甜美女</option>
+        </select>
+    </div>
+
+    <figure id="loadingSpinner">
+        <strong>MiniMates: loading...</strong>
+    </figure>
+
+    <canvas id="canvas_video"></canvas>
+    <canvas id="canvas_gl" width="128" height="128"></canvas>
+    <div id="screen"></div>
+    <iframe id="screen2" src="dialog.html" frameborder="0" style="display: none;"></iframe>
+    <div id="startMessage">加载中</div>
+
+    <script src="js/pako.min.js"></script>
+    <script src="js/mp4box.all.min.js"></script>
+    <script src="js/gl-matrix-min.js"></script>
+    <script src="js/DHLiveMini.js"></script>
+    <script src="js/MiniMateLoader.js"></script>
+    <script src="js/MiniLive2.js"></script>
+</body>
+</html>

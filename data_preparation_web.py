@@ -144,6 +144,7 @@ def step3_generate_ref_tensor(video_path, out_path):
     # print(1111, ref_in_feature.shape)
 
     np.savetxt(os.path.join(out_path, 'ref_data.txt'), ref_in_feature, fmt='%.8f')
+    # cv2.imwrite(os.path.join(out_path, 'ref.png'), renderModel_mini.ref_img_save)
 
 def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path):
     from mini_live.obj.obj_utils import generateRenderInfo, generateWrapModel
@@ -204,7 +205,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
 
     ref_in_feature = renderModel_mini.net.infer_model.ref_in_feature
     ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten()
-
+    # cv2.imwrite(os.path.join(out_path, 'ref.png'), renderModel_mini.ref_img_save)
     # 保留两位小数
     rounded_array = np.round(ref_in_feature, 6)
 

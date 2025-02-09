@@ -43,79 +43,89 @@ for i in INDEX_MP_LIPS_LOWER:
     for j in range(len(index_wrap)):
         if index_wrap[j] == i:
             index_lips_lower_wrap.append(j)
-# print(index_lips_wrap)
-# exit(-1)
-
-# index_edge_wrap = [111,43,57,21,76,59,68,67,78,66,69,168,177,169,170,161,176,123,159,145,208]
-# index_edge_wrap = [110,60,79,108,61,58,73,74,62,75,77,175,164,174,173,160,163,205,178,162,207]
-index_edge_wrap = [110,60,79,108,61,58,73,67,78,66,69,168,177,169,173,160,163,205,178,162,207]
-index_edge_wrap_upper = [111, 110, 51, 52, 53, 54, 48, 63, 56, 47, 46, 1, 148, 149, 158, 165, 150, 156, 155, 154, 153, 207, 208]
-import numpy as np
-def readObjFile(filepath):
-    v_ = []
-    face = []
-    with open(filepath) as f:
-        # with open(r"face3D.obj") as f:
-        content = f.readlines()
-    for i in content:
-        if i[:2] == "v ":
-            v0,v1,v2 = i[2:-1].split(" ")
-            v_.append(float(v0))
-            v_.append(float(v1))
-            v_.append(float(v2))
-        if i[:2] == "f ":
-            tmp = i[2:-1].split(" ")
-            for ii in tmp:
-                a = ii.split("/")[0]
-                a = int(a) - 1
-                face.append(a)
-    return v_, face
-
-verts_wrap,faces_wrap = readObjFile(r"wrap.obj")
-verts_wrap = np.array(verts_wrap).reshape(-1,3)
-vert_mid = verts_wrap[index_edge_wrap[:4] + index_edge_wrap[-4:]].mean(axis = 0)
-
-face_verts_num = len(verts_wrap)
-index_new_edge = []
-new_vert_list = []
-for i in range(len(index_edge_wrap)):
-    index = index_edge_wrap[i]
-    new_vert = verts_wrap[index] + (verts_wrap[index] - vert_mid) * 0.3
-    new_vert[2] = verts_wrap[index, 2]
-    new_vert_list.append(new_vert)
-    index_new_edge.append(len(index_wrap) + i)
-for i in range(len(index_edge_wrap) - 1):
-    faces_wrap.extend([index_edge_wrap[i], face_verts_num + i, index_edge_wrap[(i+1)%len(index_edge_wrap)]])
-    faces_wrap.extend([index_edge_wrap[(i + 1) % len(index_edge_wrap)], face_verts_num + i, face_verts_num + (i+1)%len(index_edge_wrap)])
-
-verts_wrap = np.concatenate([verts_wrap, np.array(new_vert_list).reshape(-1,3)], axis = 0)
-
-v_teeth, face_teeth = readObjFile("modified_teeth_upper.obj")
-v_teeth2, face_teeth2 = readObjFile("modified_teeth_lower.obj")
+print(index_lips_upper_wrap[:11] + index_lips_upper_wrap[33:44][::-1])
+print(index_lips_lower_wrap[:9] + index_lips_upper_wrap[27:36][::-1])
+exit(-1)
+if __name__ == "__main__":
+    # index_edge_wrap = [111,43,57,21,76,59,68,67,78,66,69,168,177,169,170,161,176,123,159,145,208]
+    # index_edge_wrap = [110,60,79,108,61,58,73,74,62,75,77,175,164,174,173,160,163,205,178,162,207]
+    index_edge_wrap = [110, 60, 79, 108, 61, 58, 73, 67, 78, 66, 69, 168, 177, 169, 173, 160, 163, 205, 178, 162, 207]
+    index_edge_wrap_upper = [111, 110, 51, 52, 53, 54, 48, 63, 56, 47, 46, 1, 148, 149, 158, 165, 150, 156, 155, 154,
+                             153, 207, 208]
+    import numpy as np
 
 
-faces_wrap = faces_wrap + [i + len(verts_wrap) for i in face_teeth] + [i + len(verts_wrap) + len(v_teeth) // 3 for i in
-                                                              face_teeth2]
+    def readObjFile(filepath):
+        v_ = []
+        face = []
+        with open(filepath) as f:
+            # with open(r"face3D.obj") as f:
+            content = f.readlines()
+        for i in content:
+            if i[:2] == "v ":
+                v0, v1, v2 = i[2:-1].split(" ")
+                v_.append(float(v0))
+                v_.append(float(v1))
+                v_.append(float(v2))
+            if i[:2] == "f ":
+                tmp = i[2:-1].split(" ")
+                for ii in tmp:
+                    a = ii.split("/")[0]
+                    a = int(a) - 1
+                    face.append(a)
+        return v_, face
 
-verts_wrap = np.concatenate([verts_wrap, np.array(v_teeth).reshape(-1,3)], axis = 0)
-verts_wrap = np.concatenate([verts_wrap, np.array(v_teeth2).reshape(-1,3)], axis = 0)
 
-# 边缘-1 正常0 上嘴唇2 下嘴唇2.01 上牙3 下牙4
-verts_wrap2 = np.zeros([len(verts_wrap), 5])
-verts_wrap2[:,:3] = verts_wrap
-verts_wrap2[index_lips_upper_wrap, 3] = 2.0
-verts_wrap2[index_lips_lower_wrap, 3] = 2.01
-verts_wrap2[-36:-18, 3] = 3
-verts_wrap2[-18:, 3] = 4
-verts_wrap2[index_edge_wrap_upper, 3] = -1
-verts_wrap2[index_new_edge, 3] = -1
-verts_wrap2[:, 4] = range(len(verts_wrap2))
+    verts_wrap, faces_wrap = readObjFile(r"wrap.obj")
+    verts_wrap = np.array(verts_wrap).reshape(-1, 3)
+    vert_mid = verts_wrap[index_edge_wrap[:4] + index_edge_wrap[-4:]].mean(axis=0)
 
-with open("face_wrap_entity.obj", "w") as f:
-    for i in verts_wrap2:
-        f.write("v {:.3f} {:.3f} {:.3f} {:.02f} {:.0f}\n".format(i[0], i[1], i[2], i[3], i[4]))
-    for i in range(len(faces_wrap)//3):
-        f.write("f {0} {1} {2}\n".format(faces_wrap[3*i]+1, faces_wrap[3*i+1]+1,faces_wrap[3*i+2]+1))
+    face_verts_num = len(verts_wrap)
+    index_new_edge = []
+    new_vert_list = []
+    for i in range(len(index_edge_wrap)):
+        index = index_edge_wrap[i]
+        new_vert = verts_wrap[index] + (verts_wrap[index] - vert_mid) * 0.3
+        new_vert[2] = verts_wrap[index, 2]
+        new_vert_list.append(new_vert)
+        index_new_edge.append(len(index_wrap) + i)
+    for i in range(len(index_edge_wrap) - 1):
+        faces_wrap.extend([index_edge_wrap[i], face_verts_num + i, index_edge_wrap[(i + 1) % len(index_edge_wrap)]])
+        faces_wrap.extend([index_edge_wrap[(i + 1) % len(index_edge_wrap)], face_verts_num + i,
+                           face_verts_num + (i + 1) % len(index_edge_wrap)])
 
-# f 240 247 254
-# f 240 254 255
+    verts_wrap = np.concatenate([verts_wrap, np.array(new_vert_list).reshape(-1, 3)], axis=0)
+
+    v_teeth, face_teeth = readObjFile("modified_teeth_upper.obj")
+    v_teeth2, face_teeth2 = readObjFile("modified_teeth_lower.obj")
+
+    faces_wrap = faces_wrap + [i + len(verts_wrap) for i in face_teeth] + [i + len(verts_wrap) + len(v_teeth) // 3 for i
+                                                                           in
+                                                                           face_teeth2]
+
+    verts_wrap = np.concatenate([verts_wrap, np.array(v_teeth).reshape(-1, 3)], axis=0)
+    verts_wrap = np.concatenate([verts_wrap, np.array(v_teeth2).reshape(-1, 3)], axis=0)
+
+    # 边缘-1 正常0 上嘴唇2 下嘴唇2.01 上牙3 下牙4
+    verts_wrap2 = np.zeros([len(verts_wrap), 5])
+    verts_wrap2[:, :3] = verts_wrap
+    verts_wrap2[index_lips_upper_wrap, 3] = 2.0
+    verts_wrap2[index_lips_lower_wrap, 3] = 2.01
+    verts_wrap2[-36:-18, 3] = 3
+    verts_wrap2[-18:, 3] = 4
+    verts_wrap2[index_edge_wrap_upper, 3] = -1
+    verts_wrap2[index_new_edge, 3] = -1
+    verts_wrap2[:, 4] = range(len(verts_wrap2))
+
+    with open("face_wrap_entity.obj", "w") as f:
+        for i in verts_wrap2:
+            f.write("v {:.3f} {:.3f} {:.3f} {:.02f} {:.0f}\n".format(i[0], i[1], i[2], i[3], i[4]))
+        for i in range(len(faces_wrap) // 3):
+            f.write(
+                "f {0} {1} {2}\n".format(faces_wrap[3 * i] + 1, faces_wrap[3 * i + 1] + 1, faces_wrap[3 * i + 2] + 1))
+
+    # f 240 247 254
+    # f 240 254 255
+
+    # f 233 231 250
+    # f 231 264 250

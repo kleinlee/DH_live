@@ -2,7 +2,7 @@
 /checkpoint/
 /mini_live/pt/
 /web_demo_authorized/
-
+/utils/
 # 忽略 video_data 文件夹下的所有内容
 video_data/*
 !video_data/000001/

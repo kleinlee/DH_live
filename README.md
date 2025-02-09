@@ -4,6 +4,10 @@ Notes：目前项目主要维护DH_live_mini, 目前最快的数字人方案，�
 
 DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/video/BV1pWkwYWEn4)
 
+# News
+- 2025-01-26 最小化简化网页资源包，gzip资源小于2MB。简化视频数据，数据大小减半
+- 2025-02-09 增加ASR入口、增加一键切换形象。
+
 # 数字人方案对比
 
 | 方案名称                     | 单帧算力（Mflops） | 使用方式   | 脸部分辨率 | 适用设备                           |
@@ -21,7 +25,8 @@ All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrI
 - **最小存储**：整个网页资源可以压缩到3MB！
 - **无须训练**: 开箱即用，无需复杂的训练过程。
   
-## Easy Usage(Gradio)
+## Easy Usage (Gradio)
+第一次使用请运行此Gradio。
 ```bash
 python app.py
 ```
@@ -45,6 +50,7 @@ python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。
 ### Run with Audio File
+语音文件必须是单通道16K Hz的wav文件格式。
 ```bash
 python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
 ```

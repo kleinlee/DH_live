@@ -47,6 +47,8 @@ class RenderModel_Mini:
             # cv2.imshow("ss", ref_face_edge[h_pad:-h_pad, w_pad:-w_pad])
             # cv2.waitKey(-1)
             ref_img_list.append(ref_img)
+
+        self.ref_img_save = np.concatenate([i[:,:,:3] for i in ref_img_list], axis=1)
         self.ref_img = np.concatenate(ref_img_list, axis=2)
 
         ref_tensor = torch.from_numpy(self.ref_img / 255.).float().permute(2, 0, 1).unsqueeze(0).cuda()
