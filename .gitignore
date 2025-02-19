@@ -11,3 +11,5 @@ video_data/*
 !video_data/audio0.wav
 !video_data/audio1.wav
 !video_data/demo.mp4
+
+/web_demo/static/ios_test.html

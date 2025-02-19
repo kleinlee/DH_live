@@ -91,6 +91,8 @@ class VideoProcessor {
 
             // 添加逆序帧逻辑
             if (this.videoFrames.length === this.nbSampleTotal && !this.isReverseAdded) {
+
+                this.sortVideoFrames();
                 this.videoFrames.push(...[...this.videoFrames].reverse());
                 this.isReverseAdded = true;
                 console.log(`Total frames: ${this.videoFrames.length}`);
@@ -126,6 +128,9 @@ class VideoProcessor {
         const stream = new DataStream(undefined, 0, DataStream.BIG_ENDIAN);
         box.write(stream);
         return new Uint8Array(stream.buffer.slice(8));
+    }
+    sortVideoFrames() {
+        this.videoFrames.sort((a, b) => a.timestamp - b.timestamp);
     }
 }
 
@@ -410,6 +415,10 @@ async function newVideoTask() {
 }
 
 function render(mat_world, subPoints, bsArray) {
+    if (isPaused) {
+        // 如果暂停，直接返回，不处理帧
+        return;
+    }
     gl.useProgram(program);
     const worldMatUniformLocation = gl.getUniformLocation(program, "gWorld0");
     gl.uniformMatrix4fv(worldMatUniformLocation, false, mat_world);
@@ -478,6 +487,10 @@ async function initMemory() {
 
 
 async function processDataSet(currentDataSetIndex) {
+    if (isPaused) {
+        // 如果暂停，直接返回，不处理帧
+        return;
+    }
     const dataSet = dataSets[currentDataSetIndex];
     const rect = dataSet.rect;
 

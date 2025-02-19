@@ -73,9 +73,9 @@ def create_interface():
         """)
         with gr.Row():
             with gr.Column():
-                video2 = gr.Video(label="上传静默视频", elem_id="video-output")
+                video2 = gr.Video(label="上传静默视频", elem_id="video-output", sources="upload")
             with gr.Column():
-                video1 = gr.Video(label="上传说话视频", elem_id="video-output")
+                video1 = gr.Video(label="上传说话视频", elem_id="video-output", sources="upload")
         # 增加可选项
         resize_option = gr.Checkbox(label="是否转为最高720P（适配手机）", value=True)
         process_button = gr.Button("处理视频")
@@ -105,6 +105,9 @@ def create_interface():
         # 第三部分：启动网页
         gr.Markdown("## 第三部分：启动网页")
         launch_button = gr.Button("启动网页")
+        gr.Markdown("""
+        - **注意**：本项目使用了 WebCodecs API，该 API 仅在安全上下文（HTTPS 或 localhost）中可用。因此，在部署或测试时，请确保您的网页在 HTTPS 环境下运行，或者使用 localhost 进行本地测试。
+                """)
         launch_output = gr.Textbox(label="启动结果")
         gr.Markdown("""
         - 点击“启动网页”按钮后，会启动 `server.py`，提供一个模拟对话服务。
@@ -150,7 +153,6 @@ def create_interface():
     "endpoint": false
 }
 ```
-        - **注意**：本项目使用了 WebCodecs API，该 API 仅在安全上下文（HTTPS 或 localhost）中可用。因此，在部署或测试时，请确保您的网页在 HTTPS 环境下运行，或者使用 localhost 进行本地测试。
         """)
         # 第四部分：商业授权和更新
         gr.Markdown("## 第四部分：完整服务与更新")

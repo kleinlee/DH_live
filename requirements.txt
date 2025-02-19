@@ -3,3 +3,4 @@ mediapipe
 sounddevice
 tqdm
 scikit-learn
+pyglm

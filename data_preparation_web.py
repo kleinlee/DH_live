@@ -160,7 +160,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     wrapModel_verts, wrapModel_face = generateWrapModel()
     mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
 
-    face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.5 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.5
+    face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.6 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.4
 
     face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
 
