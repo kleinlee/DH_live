@@ -327,3 +327,31 @@ def RotateAngle2Matrix(tmp):   #tmp为xyz的旋转角,角度值
     matRotate = np.matmul(matZ, matY)
     matRotate = np.matmul(matRotate, matX)
     return matRotate
+
+
+def normalizeLips(face_pts, face_pts_mean):
+    INDEX_MP_LIPS = [
+        291, 409, 270, 269, 267, 0, 37, 39, 40, 185, 61,
+        146, 91, 181, 84, 17, 314, 405, 321, 375,
+        306, 408, 304, 303, 302, 11, 72, 73, 74, 184, 76,
+        77, 90, 180, 85, 16, 315, 404, 320, 307,
+        292, 407, 272, 271, 268, 12, 38, 41, 42, 183, 62,
+        96, 89, 179, 86, 15, 316, 403, 319, 325,
+        308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78,
+        95, 88, 178, 87, 14, 317, 402, 318, 324,
+    ]
+    # 九组对应点的距离
+    bias_mouth = []
+    for i in range(9):
+        index0 = INDEX_MP_LIPS[60:80][i+1]
+        index1 = INDEX_MP_LIPS[60:80][-i]
+        bias_mouth.append(np.linalg.norm(face_pts_mean[index0] - face_pts_mean[index1]) - np.linalg.norm(face_pts[index0] - face_pts[index1]))
+
+    # 分别应用这九组点的偏差
+    for i in range(9):
+        for j in range(4):
+            index0 = INDEX_MP_LIPS[j*20:j*20 + 20][i + 1]
+            index1 = INDEX_MP_LIPS[j*20:j*20 + 20][-i]
+            face_pts[index0, 1] -= bias_mouth[i] / 2
+            face_pts[index1, 1] += bias_mouth[i] / 2
+    return face_pts

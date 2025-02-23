@@ -7,7 +7,7 @@ import os
 import gzip
 from talkingface.data.few_shot_dataset import get_image
 import shutil
-from talkingface.utils import crop_mouth, main_keypoints_index, smooth_array
+from talkingface.utils import crop_mouth, main_keypoints_index, smooth_array,normalizeLips
 import json
 from mini_live.obj.wrap_utils import index_wrap, index_edge_wrap
 import pickle
@@ -160,8 +160,8 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     wrapModel_verts, wrapModel_face = generateWrapModel()
     mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
 
-    face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.6 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.4
-
+    # face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.33 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.66
+    face_pts_mean_personal_primer = normalizeLips(face_pts_mean_personal_primer, face_pts_mean)
     face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
 
     face3D_data = []
