@@ -46,6 +46,7 @@ class DINetTrainingOptions():
         self.parser.add_argument('--batch_size', type=int, default=24, help='training batch size')
         self.parser.add_argument('--lamb_perception', type=int, default=10, help='weight of perception loss')
         self.parser.add_argument('--lamb_syncnet_perception', type=int, default=0.1, help='weight of perception loss')
+        self.parser.add_argument('--lamb_pixel', type=int, default=10, help='weight of perception loss')
         self.parser.add_argument('--lr_g', type=float, default=0.00008, help='initial learning rate for adam')
         self.parser.add_argument('--lr_d', type=float, default=0.00008, help='initial learning rate for adam')
         self.parser.add_argument('--start_epoch', default=1, type=int, help='start epoch in training stage')

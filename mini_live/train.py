@@ -38,12 +38,12 @@ if __name__ == "__main__":
     opt.target_channel = 3
     opt.ref_channel = n_ref * 4
     opt.D_num_blocks = 3
-    opt.batch_size = 4
-    opt.result_path = "checkpoint/{}".format(model_name)
+    opt.batch_size = 6
+    opt.result_path = "../checkpoint/{}".format(model_name)
     opt.resume = True
-    opt.resume_path = "checkpoint/{}/epoch_18.pth".format(model_name)
-    train_log_path = os.path.join("checkpoint/{}/log".format(model_name), "")
-    opt.seed = 1008
+    opt.resume_path = "../checkpoint/{}/epoch_24.pth".format(model_name)
+    train_log_path = os.path.join("../checkpoint/{}/log".format(model_name), "")
+    opt.seed = 1009
 
     # set seed
     random.seed(opt.seed)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(opt.seed)
 
     df = pd.read_csv(r"F:\C\AI\CV\DH008_few_shot\DH0119_mouth64_48/imageVar2.csv")
-    video_list = df[df["imageVar"] > 360000]["name"].tolist()
+    video_list = df[df["imageVar"] > 350000]["name"].tolist()
     video_list = [i for i in video_list if os.path.exists(i)]
     video_list = [os.path.dirname(os.path.dirname(i)) for i in video_list]
     path_ = r"F:\C\AI\CV\DH008_few_shot/preparation_bilibili"
@@ -99,6 +99,7 @@ if __name__ == "__main__":
         avg_loss_g_perception = 0
         avg_Loss_DI = 0
         avg_Loss_GI = 0
+        avg_Loss_Pixel = 0
         for iteration, data in enumerate(training_data_loader):
             # read data
             source_tensor, ref_tensor, target_tensor, image_name = data
@@ -137,14 +138,18 @@ if __name__ == "__main__":
                 loss_g_perception += criterionL1(perception_fake_half[i], perception_real_half[i])
             loss_g_perception = (loss_g_perception / (len(perception_real) * 2)) * opt.lamb_perception
 
+            # 计算像素级损失
+            loss_g_pixel = criterionL1(fake_out, target_tensor) + criterionL1(fake_out_half, target_tensor_half)
+            loss_g_pixel = loss_g_pixel * opt.lamb_pixel  # 假设 opt.lamb_pixel 是像素级损失的权重
+
             # gan dI loss
             loss_g_dI = criterionGAN(pred_fake_dI, True)
             # combine perception loss and gan loss
-            loss_g = loss_g_perception + loss_g_dI
+            loss_g = loss_g_perception + loss_g_dI + loss_g_pixel
             loss_g.backward()
             optimizer_g.step()
-            message = "===> Epoch[{}]({}/{}): Loss_DI: {:.4f} Loss_GI: {:.4f} Loss_perception: {:.4f} lr_g = {:.7f} lr_d = {:.7f}".format(
-                    epoch, iteration, len(training_data_loader), float(loss_dI), float(loss_g_dI),
+            message = "===> Epoch[{}]({}/{}): Loss_DI: {:.4f} Loss_GI: {:.4f} loss_g_pixel: {:.4f} Loss_perception: {:.4f} lr_g = {:.7f} lr_d = {:.7f}".format(
+                    epoch, iteration, len(training_data_loader), float(loss_dI), float(loss_g_dI), float(loss_g_pixel),
                     float(loss_g_perception), optimizer_g.param_groups[0]['lr'], optimizer_d.param_groups[0]['lr'])
             print(message)
             # with open("train_log.txt", "a") as f:
@@ -165,21 +170,23 @@ if __name__ == "__main__":
                 log(train_logger, fig=inference_out, tag="Training/epoch_{}_{}".format(epoch, iteration))
 
                 real_iteration = epoch * len(training_data_loader) + iteration
-                message1 = "Step {}/{}, ".format(real_iteration, (epoch + 1) * len(training_data_loader))
-                message2 = ""
-                losses = [loss_dI.item(), loss_g_perception.item(), loss_g_dI.item()]
+                losses = [loss_dI.item(), loss_g_perception.item(), loss_g_dI.item(), loss_g_pixel.item()]
                 train_logger.add_scalar("Loss/loss_dI", losses[0], real_iteration)
                 train_logger.add_scalar("Loss/loss_g_perception", losses[1], real_iteration)
                 train_logger.add_scalar("Loss/loss_g_dI", losses[2], real_iteration)
+                train_logger.add_scalar("Loss/loss_g_pixel", losses[3], real_iteration)
 
             avg_loss_g_perception += loss_g_perception.item()
             avg_Loss_DI += loss_dI.item()
             avg_Loss_GI += loss_g_dI.item()
+            avg_Loss_Pixel += loss_g_pixel.item()
         train_logger.add_scalar("Loss/{}".format("epoch_g_perception"), avg_loss_g_perception / len(training_data_loader), epoch)
         train_logger.add_scalar("Loss/{}".format("epoch_DI"),
                                 avg_Loss_DI / len(training_data_loader), epoch)
         train_logger.add_scalar("Loss/{}".format("epoch_GI"),
                                 avg_Loss_GI / len(training_data_loader), epoch)
+        train_logger.add_scalar("Loss/{}".format("epoch_Pixel"),
+                                avg_Loss_Pixel / len(training_data_loader), epoch)
         update_learning_rate(net_g_scheduler, optimizer_g)
         update_learning_rate(net_d_scheduler, optimizer_d)
 

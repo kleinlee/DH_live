@@ -11,7 +11,7 @@ import pickle
 import cv2
 
 from talkingface.utils import draw_mouth_maps
-
+from talkingface.models.DINet_mini import input_height,input_width
 class RenderModel_Mini:
     def __init__(self):
         self.__net = None
@@ -40,8 +40,8 @@ class RenderModel_Mini:
             # cv2.waitKey(-1)
             ref_face_edge = cv2.resize(ref_face_edge, (128, 128))
             ref_img = cv2.resize(ref_img, (128, 128))
-            w_pad = int((128 - 72) / 2)
-            h_pad = int((128 - 56) / 2)
+            w_pad = int((128 - input_width) / 2)
+            h_pad = int((128 - input_height) / 2)
 
             ref_img = np.concatenate([ref_img[h_pad:-h_pad, w_pad:-w_pad,:3], ref_face_edge[h_pad:-h_pad, w_pad:-w_pad, :1]], axis=2)
             # cv2.imshow("ss", ref_face_edge[h_pad:-h_pad, w_pad:-w_pad])

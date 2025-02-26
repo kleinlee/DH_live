@@ -4,3 +4,5 @@ sounddevice
 tqdm
 scikit-learn
 pyglm
+glfw
+PyOpenGL

@@ -9,6 +9,7 @@ import torch
 from talkingface.model_utils import LoadAudioModel, Audio2bs
 from talkingface.data.few_shot_dataset import get_image
 from mini_live.render import create_render_model
+from talkingface.models.DINet_mini import input_height,input_width
 
 def interface_mini(path, wav_path, output_video_path):
     # 加载音频模型
@@ -35,7 +36,7 @@ def interface_mini(path, wav_path, output_video_path):
     # 从 combined_data 中提取数据
     face3D_obj = combined_data["face3D_obj"]
     json_data = combined_data["json_data"]
-    ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, 20, 14, 18])
+    ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, 20, input_height//4, input_width//4])
 
     # 设置 ref_data 到渲染模型
     renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data).float().cuda()

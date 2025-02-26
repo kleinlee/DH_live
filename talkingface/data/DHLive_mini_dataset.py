@@ -7,7 +7,7 @@ import glob
 import pickle
 import torch
 import torch.utils.data as data
-
+from talkingface.models.DINet_mini import input_height,input_width
 model_size = (256, 256)
 
 def get_image(A_path, crop_coords, input_type, resize= (256, 256)):
@@ -92,15 +92,15 @@ class Few_Shot_Dataset(data.Dataset):
 
     def get_ref_images(self, video_index, ref_img_index_list):
         # 参考图片
-        ref_img_list = []
+        self.ref_img_list = []
         for ref_img_index in ref_img_index_list:
             ref_img = cv2.imread(self.driven_images[video_index][ref_img_index])[:, :, ::-1]
             # ref_img = cv2.convertScaleAbs(ref_img, alpha=self.alpha, beta=self.beta)
             ref_keypoints = self.driven_keypoints[video_index][ref_img_index]
             ref_img = generate_ref(ref_img, ref_keypoints, self.is_train)
 
-            ref_img_list.append(ref_img)
-        self.ref_img = np.concatenate(ref_img_list, axis=2)
+            self.ref_img_list.append(ref_img)
+        # self.ref_img = np.concatenate(ref_img_list, axis=2)
 
     def __getitem__(self, index):
         if self.is_train:
@@ -120,6 +120,28 @@ class Few_Shot_Dataset(data.Dataset):
 
         # target图片
         target_img = cv2.imread(self.driven_images[video_index][current_clip])[:, :, ::-1]
+
+        if self.is_train:
+            # 统一生成随机参数
+            alpha = np.random.uniform(0.8, 1.2)  # 对比度
+            beta = np.random.randint(-20, 20)  # 亮度
+            h_shift = np.random.randint(-15, 15)  # 色相偏移
+
+            target_img = cv2.convertScaleAbs(target_img, alpha=alpha, beta=beta)
+            target_img = cv2.cvtColor(target_img, cv2.COLOR_RGB2HSV)
+            target_img[..., 0] = (target_img[..., 0] + h_shift) % 180
+            target_img = cv2.cvtColor(target_img, cv2.COLOR_HSV2RGB)
+
+            for ii in range(len(self.ref_img_list)):
+                ref_img = self.ref_img_list[ii][:,:,:3]
+                ref_img = cv2.convertScaleAbs(ref_img, alpha=alpha, beta=beta)
+                ref_img = cv2.cvtColor(ref_img, cv2.COLOR_RGB2HSV)
+                ref_img[..., 0] = (ref_img[..., 0] + h_shift) % 180
+                ref_img = cv2.cvtColor(ref_img, cv2.COLOR_HSV2RGB)
+                self.ref_img_list[ii] = np.concatenate([ref_img, self.ref_img_list[ii][:,:,3:]], axis = 2)
+
+        self.ref_img = np.concatenate(self.ref_img_list, axis=2)
+
         # target_img = cv2.convertScaleAbs(target_img, alpha=self.alpha, beta=self.beta)
         ref_face_edge = np.zeros_like(target_img)
         target_keypoints = self.driving_keypoints[video_index][current_clip]
@@ -149,8 +171,8 @@ class Few_Shot_Dataset(data.Dataset):
         self.ref_img = cv2.resize(self.ref_img, (128, 128))
 
 
-        w_pad = int((128 - 72) / 2)
-        h_pad = int((128 - 56) / 2)
+        w_pad = int((128 - input_width) / 2)
+        h_pad = int((128 - input_height) / 2)
 
         target_img = target_img[h_pad:-h_pad, w_pad:-w_pad]/255.
         source_img = source_img[h_pad:-h_pad, w_pad:-w_pad]/255.
@@ -180,17 +202,22 @@ def data_preparation(train_video_list):
         img_filelist.sort()
         if len(img_filelist) == 0:
             continue
-        img_all.append(img_filelist)
         img_teeth_filelist = glob.glob("{}/teeth_seg/*.png".format(model_name))
         img_teeth_filelist.sort()
-        teeth_img_all.append(img_teeth_filelist)
 
         teeth_rect_array = np.loadtxt("{}/teeth_seg/all.txt".format(model_name))
-        teeth_rect_all.append(teeth_rect_array)
         Path_output_pkl = "{}/keypoint_rotate.pkl".format(model_name)
         with open(Path_output_pkl, "rb") as f:
             images_info = pickle.load(f)
-        keypoints_all.append(images_info[:, main_keypoints_index, :2])
+
+        # print(len(img_filelist), len(images_info), len(img_teeth_filelist), len(teeth_rect_array))
+        # exit(1)
+        valid_frame_num = min(len(img_filelist), len(images_info), len(img_teeth_filelist), len(teeth_rect_array))
+
+        img_all.append(img_filelist[:valid_frame_num])
+        keypoints_all.append(images_info[:valid_frame_num, main_keypoints_index, :2])
+        teeth_img_all.append(img_teeth_filelist[:valid_frame_num])
+        teeth_rect_all.append(teeth_rect_array[:valid_frame_num])
 
     print("train size: ", len(img_all))
     dict_info = {}

@@ -2,7 +2,7 @@
 # 实时数字人 全网最快
 Notes：目前项目主要维护DH_live_mini, 目前最快的数字人方案，没有之一，项目含有网页推理的案例，不依赖任何GPU，可在任何手机设备实时运行。原版DH_live已不再获支持，希望慎重考虑使用。原版使用方法参见[here](https://github.com/kleinlee/DH_live/blob/main/README_DH_live.md)。
 
-DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/video/BV1pWkwYWEn4)
+DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
 
 ![微信图片_20250209153828](https://github.com/user-attachments/assets/32650fac-3885-4c98-886f-66258ef891a7)
 
@@ -29,7 +29,7 @@ All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrI
 - **无须训练**: 开箱即用，无需复杂的训练过程。
   
 ## Easy Usage (Gradio)
-第一次使用请运行此Gradio。
+第一次使用或想获取完整流程请运行此Gradio。
 ```bash
 python app.py
 ```
@@ -67,6 +67,6 @@ python web_demo/server.py
 DH_live is licensed under the MIT License.
 
 ## 联系
-| 进入QQ群聊，分享看法和最新咨询。 | 加我好友，请备注“进群”，拉你进去微信交流群。 |
+|  加我好友，请备注“进群”，拉你进去微信交流群。| 进入QQ群聊，分享看法和最新咨询。 |
 |-------------------|----------------------|
-| ![QQ群聊](https://github.com/user-attachments/assets/29bfef3f-438a-4b9f-ba09-e1926d1669cb) | ![微信交流群](https://github.com/user-attachments/assets/b1f24ebb-153b-44b1-b522-14f765154110) |
+| ![微信交流群](https://github.com/user-attachments/assets/b1f24ebb-153b-44b1-b522-14f765154110) | ![QQ群聊](https://github.com/user-attachments/assets/29bfef3f-438a-4b9f-ba09-e1926d1669cb) |

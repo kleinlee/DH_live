@@ -7,6 +7,9 @@ import numpy as np
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
+input_width = 72
+input_height = 72
+
 class DownBlock(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, padding=1, groups=1, use_relu=True):
         super(DownBlock, self).__init__()
@@ -186,7 +189,7 @@ class AdaAT(nn.Module):
         self.tanh = nn.Tanh()
         self.sigmoid = nn.Sigmoid()
         self.cuda = cuda
-        self.f_dim = (20, 14, 18)
+        self.f_dim = (20, input_height//4, input_width//4)
         if cuda:
             self.grid_xy, self.grid_z = make_coordinate_grid_3d(self.f_dim, torch.cuda.FloatTensor)
         else:
@@ -317,6 +320,7 @@ class DINet_mini_pipeline(nn.Module):
         face_fusion_tensor = cv2.imread(os.path.join(current_dir, "../../mini_live/face_fusion_mask.png"))
         face_fusion_tensor = torch.from_numpy(face_fusion_tensor[:,:,:1] / 255.).float().permute(2, 0, 1).unsqueeze(0)
         mouth_fusion_tensor = cv2.imread(os.path.join(current_dir, "../../mini_live/mouth_fusion_mask.png"))
+        mouth_fusion_tensor = cv2.resize(mouth_fusion_tensor, (input_width, input_height))
         mouth_fusion_tensor = torch.from_numpy(mouth_fusion_tensor[:,:,:1] / 255.).float().permute(2, 0, 1).unsqueeze(0)
 
         self.face_fusion_tensor = face_fusion_tensor.to("cuda" if cuda else "cpu")
@@ -359,8 +363,8 @@ class DINet_mini_pipeline(nn.Module):
         # return warped_tensor
 
         # warped_tensor = warped_img0
-        w_pad = int((128 - 72) / 2)
-        h_pad = int((128 - 56) / 2)
+        w_pad = int((128 - input_width) / 2)
+        h_pad = int((128 - input_height) / 2)
         gl_mouth_tensor = gl_tensor * face_mask
         gl_mouth_tensor = gl_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
 
@@ -370,6 +374,7 @@ class DINet_mini_pipeline(nn.Module):
         fake_mouth_tensor_input = warped_mouth_tensor + gl_mouth_tensor
         fake_out = self.infer_model.interface(fake_mouth_tensor_input)
         # fake_out = warped_mouth_tensor
+        # print(fake_out.size(), self.mouth_fusion_tensor.size(), warped_mouth_tensor.size())
         fake_out = fake_out * self.mouth_fusion_tensor + warped_mouth_tensor*(1-self.mouth_fusion_tensor)
         warped_img0[:, :3, h_pad:-h_pad, w_pad:-w_pad] = fake_out
         warped_img0[:,3] = source_tensor[:,3]
@@ -411,11 +416,9 @@ if __name__ == "__main__":
     model = DINet_mini_pipeline(3, 4*3, cuda = device=="cuda")
     model.eval()
     model = model.to(device)
-    source_tensor = torch.ones([1, 3, size[0], size[1]]).to(device)
-    gl_tensor = torch.ones([1, 3, size[0], size[1]]).to(device)
-    ref_tensor = torch.ones([1, 4*3, 56, 72]).to(device)
-    face_fusion_tensor = torch.ones([1, 1, size[0], size[1]]).to(device)
-    mouth_fusion_tensor = torch.ones([1, 1, 56, 72]).to(device)
+    source_tensor = torch.ones([1, 4, size[0], size[1]]).to(device)
+    gl_tensor = torch.ones([1, 4, size[0], size[1]]).to(device)
+    ref_tensor = torch.ones([1, 4*3, input_height, input_width]).to(device)
 
     from thop import profile
     from thop import clever_format
