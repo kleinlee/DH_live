@@ -8,6 +8,8 @@
 video_data/*
 !video_data/000001/
 !video_data/000002/
+!video_data/teeth_ref/
+video_data/teeth_ref/*_2.png
 !video_data/test/
 !video_data/audio1.wav
 
