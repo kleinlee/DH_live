@@ -33,10 +33,19 @@ def generate_input(img, keypoints, is_train = False, mode=["mouth_bias"]):
     source_face_egde = draw_mouth_maps(source_keypoints, im_edges = source_img)
     return source_img,target_img,crop_coords
 
-def generate_ref(img, keypoints, is_train=False, alpha = None, beta = None):
+def generate_ref(img, keypoints, is_train=False, teeth = False):
     crop_coords = crop_mouth(keypoints, img.shape[1], img.shape[0], is_train=is_train)
     ref_keypoints = get_image(keypoints, crop_coords, input_type='mediapipe', resize = model_size)
     ref_img = get_image(img, crop_coords, input_type='img', resize = model_size)
+
+    if teeth:
+        teeth_mask = np.zeros((model_size[1], model_size[0], 3), np.uint8)  # edge map for all edges
+        pts = ref_keypoints[INDEX_LIPS_INNER, :2]
+        pts = pts.reshape((-1, 1, 2)).astype(np.int32)
+        cv2.fillPoly(teeth_mask, [pts], color=(1, 1, 1))
+        # cv2.imshow("s", teeth_mask*255)
+        # cv2.waitKey(-1)
+        ref_img = ref_img * teeth_mask
 
     ref_face_edge = draw_mouth_maps(ref_keypoints, size = model_size)
     ref_img = np.concatenate([ref_img, ref_face_edge[:,:,:1]], axis=2)
@@ -93,11 +102,14 @@ class Few_Shot_Dataset(data.Dataset):
     def get_ref_images(self, video_index, ref_img_index_list):
         # 参考图片
         self.ref_img_list = []
-        for ref_img_index in ref_img_index_list:
+        for index_,ref_img_index in enumerate(ref_img_index_list):
             ref_img = cv2.imread(self.driven_images[video_index][ref_img_index])[:, :, ::-1]
             # ref_img = cv2.convertScaleAbs(ref_img, alpha=self.alpha, beta=self.beta)
             ref_keypoints = self.driven_keypoints[video_index][ref_img_index]
-            ref_img = generate_ref(ref_img, ref_keypoints, self.is_train)
+            if index_ > 0:
+                ref_img = generate_ref(ref_img, ref_keypoints, self.is_train, teeth = True)
+            else:
+                ref_img = generate_ref(ref_img, ref_keypoints, self.is_train)
 
             self.ref_img_list.append(ref_img)
         # self.ref_img = np.concatenate(ref_img_list, axis=2)
@@ -107,7 +119,8 @@ class Few_Shot_Dataset(data.Dataset):
             video_index = random.randint(0, len(self.driven_images) - 1)
             current_clip = random.randint(0, self.clip_count_list[video_index] - 1)
 
-            ref_img_index_list = select_ref_index(self.driven_keypoints[video_index], n_ref = self.n_ref, ratio = 0.33)      # 从当前视频选n_ref个图片
+            ref_img_index_list = select_ref_index(self.driven_keypoints[video_index], n_ref = self.n_ref - 1, ratio = 0.33)      # 从当前视频选n_ref个图片
+            ref_img_index_list = [random.randint(0, self.clip_count_list[video_index] - 1)] + ref_img_index_list
 
             self.get_ref_images(video_index, ref_img_index_list)
         else:
@@ -124,7 +137,7 @@ class Few_Shot_Dataset(data.Dataset):
         if self.is_train:
             # 统一生成随机参数
             alpha = np.random.uniform(0.8, 1.2)  # 对比度
-            beta = np.random.randint(-20, 20)  # 亮度
+            beta = 0  # 亮度
             h_shift = np.random.randint(-15, 15)  # 色相偏移
 
             target_img = cv2.convertScaleAbs(target_img, alpha=alpha, beta=beta)

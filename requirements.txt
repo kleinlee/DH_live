@@ -1,8 +1,8 @@
 kaldi_native_fbank
 mediapipe
-sounddevice
 tqdm
 scikit-learn
 pyglm
 glfw
 PyOpenGL
+gradio

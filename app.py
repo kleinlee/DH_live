@@ -19,11 +19,11 @@ css = """
 
 video_dir_path = ""
 # 假设你已经有了这两个函数
-def data_preparation(video1, video2, resize_option):
+def data_preparation(video1, resize_option):
     global video_dir_path
     # 处理视频的逻辑
     video_dir_path = "video_data/{}".format(uuid.uuid4())
-    data_preparation_mini(video1, video2, video_dir_path, resize_option)
+    data_preparation_mini(video1, video_dir_path, resize_option)
     data_preparation_web(video_dir_path)
 
     return "视频处理完成，保存至目录{}".format(video_dir_path)
@@ -68,14 +68,11 @@ def create_interface():
         # 第一部分：上传静默视频和说话视频
         gr.Markdown("## 第一部分：视频处理")
         gr.Markdown("""
-        - **静默视频**：时长建议在 5-30 秒之间，嘴巴不要动，是主体视频。嘴巴如果有动作会影响效果，请认真对待。
-        - **说话视频**：只需 1-5 秒，需要张嘴，作用是捕捉嘴巴内部的细节。
+        - **静默视频**：时长建议在 5-30 秒之间，嘴巴不要动(保持闭嘴或微张)。嘴巴如果有动作会影响效果，请认真对待。
         """)
         with gr.Row():
             with gr.Column():
-                video2 = gr.Video(label="上传静默视频", elem_id="video-output", sources="upload")
-            with gr.Column():
-                video1 = gr.Video(label="上传说话视频", elem_id="video-output", sources="upload")
+                video1 = gr.Video(label="上传静默视频", elem_id="video-output", sources="upload")
         # 增加可选项
         resize_option = gr.Checkbox(label="是否转为最高720P（适配手机）", value=True)
         process_button = gr.Button("处理视频")
@@ -165,7 +162,7 @@ def create_interface():
 
 
         # 绑定按钮点击事件
-        process_button.click(data_preparation, inputs=[video1, video2, resize_option], outputs=process_output)
+        process_button.click(data_preparation, inputs=[video1, resize_option], outputs=process_output)
         generate_button.click(demo_mini, inputs=audio, outputs=video_output)
         launch_button.click(launch_server, outputs=launch_output)
 

@@ -19,7 +19,7 @@ def step0_keypoints(video_path, out_path):
         pts_3d = pickle.load(f)
 
     pts_3d = pts_3d.reshape(len(pts_3d), -1)
-    smooth_array_ = smooth_array(pts_3d, weight=[0.03, 0.1, 0.74, 0.1, 0.03])
+    smooth_array_ = smooth_array(pts_3d, weight=[0.02, 0.09, 0.78, 0.09, 0.02])
     pts_3d = smooth_array_.reshape(len(pts_3d), 478, 3)
 
     video_path = os.path.join(video_path, "circle.mp4")
@@ -67,85 +67,6 @@ def step1_crop_mouth(pts_3d, vid_width, vid_height):
 
     return list_source_crop_rect, list_standard_v
 
-def step2_generate_obj(list_source_crop_rect, list_standard_v, out_path):
-    from mini_live.obj.obj_utils import generateRenderInfo, generateWrapModel
-    render_verts, render_face = generateRenderInfo()
-    face_pts_mean = render_verts[:478, :3].copy()
-
-    wrapModel_verts, wrapModel_face = generateWrapModel()
-    # 求平均人脸
-    from talkingface.run_utils import calc_face_mat
-    mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
-
-    from mini_live.obj.utils import INDEX_MP_LIPS
-    face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.5 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.5
-
-    from mini_live.obj.wrap_utils import newWrapModel
-    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
-
-    with open(os.path.join(out_path,"face3D.obj"), "w") as f:
-        for i in face_wrap_entity:
-            f.write("v {:.3f} {:.3f} {:.3f} {:.02f} {:.0f}\n".format(i[0], i[1], i[2], i[3], i[4]))
-        for i in range(len(wrapModel_face) // 3):
-            f.write("f {0} {1} {2}\n".format(wrapModel_face[3 * i] + 1, wrapModel_face[3 * i + 1] + 1,
-                                             wrapModel_face[3 * i + 2] + 1))
-    json_data = []
-    for frame_index in range(len(list_source_crop_rect)):
-        source_crop_rect = list_source_crop_rect[frame_index]
-        standard_v = list_standard_v[frame_index]
-
-        standard_v = standard_v[index_wrap, :2].flatten().tolist()
-        mat = mat_list[frame_index].T.flatten().tolist()
-        # 将 standard_v 中所有元素四舍五入到两位小数
-        standard_v_rounded = [round(i, 5) for i in mat] + [round(i, 1) for i in standard_v]
-        print(len(standard_v_rounded), 16 + 209 * 2)
-        json_data.append({"rect": source_crop_rect.tolist(), "points": standard_v_rounded})
-        # print(json_data)
-        # break
-    with open(os.path.join(out_path, "json_data.json"), "w") as f:
-        json.dump(json_data, f)
-
-def step3_generate_ref_tensor(video_path, out_path):
-    from talkingface.render_model_mini import RenderModel_Mini
-    renderModel_mini = RenderModel_Mini()
-    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
-
-    # 读取ref video信息
-    Path_output_pkl = "{}/ref.pkl".format(video_path)
-    with open(Path_output_pkl, "rb") as f:
-        ref_images_info = pickle.load(f)
-
-    video_path = "{}/ref.mp4".format(video_path)
-    cap = cv2.VideoCapture(video_path)
-    vid_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    vid_width_ref = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    vid_height_ref = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    list_standard_img_ref = []
-    list_standard_v_ref = []
-    standard_size = 128
-    for frame_index in range(min(vid_frame_count, len(ref_images_info))):
-        ret, frame = cap.read()
-
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        source_pts = ref_images_info[frame_index]
-        source_crop_rect = crop_mouth(source_pts[main_keypoints_index], vid_width_ref, vid_height_ref)
-
-        standard_img = get_image(frame, source_crop_rect, input_type="image", resize=standard_size)
-        standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
-        list_standard_img_ref.append(standard_img)
-        list_standard_v_ref.append(standard_v)
-    cap.release()
-
-    renderModel_mini.reset_charactor(list_standard_img_ref, np.array(list_standard_v_ref)[:, main_keypoints_index], standard_size = standard_size)
-
-    ref_in_feature = renderModel_mini.net.infer_model.ref_in_feature
-    ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten()
-    # print(1111, ref_in_feature.shape)
-
-    np.savetxt(os.path.join(out_path, 'ref_data.txt'), ref_in_feature, fmt='%.8f')
-    # cv2.imwrite(os.path.join(out_path, 'ref.png'), renderModel_mini.ref_img_save)
-
 def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path):
     from mini_live.obj.obj_utils import generateRenderInfo, generateWrapModel
     from talkingface.run_utils import calc_face_mat
@@ -175,38 +96,34 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     renderModel_mini = RenderModel_Mini()
     renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
 
-    Path_output_pkl = "{}/ref.pkl".format(video_path)
+    Path_output_pkl = "{}/circle.pkl".format(video_path)
     with open(Path_output_pkl, "rb") as f:
         ref_images_info = pickle.load(f)
 
-    video_path = "{}/ref.mp4".format(video_path)
+    video_path = "{}/circle.mp4".format(video_path)
     cap = cv2.VideoCapture(video_path)
     vid_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    assert vid_frame_count > 0, "处理后的视频无有效帧"
     vid_width_ref = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     vid_height_ref = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    list_standard_img_ref = []
-    list_standard_v_ref = []
     standard_size = 128
-    for frame_index in range(min(vid_frame_count, len(ref_images_info))):
-        ret, frame = cap.read()
-
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        source_pts = ref_images_info[frame_index]
-        source_crop_rect = crop_mouth(source_pts[main_keypoints_index], vid_width_ref, vid_height_ref)
-
-        standard_img = get_image(frame, source_crop_rect, input_type="image", resize=standard_size)
-        standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
-        list_standard_img_ref.append(standard_img)
-        list_standard_v_ref.append(standard_v)
+    frame_index = 0
+    ret, frame = cap.read()
     cap.release()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+    source_pts = ref_images_info[frame_index]
+    source_crop_rect = crop_mouth(source_pts[main_keypoints_index], vid_width_ref, vid_height_ref)
 
-    renderModel_mini.reset_charactor(list_standard_img_ref, np.array(list_standard_v_ref)[:, main_keypoints_index], standard_size=standard_size)
+    standard_img = get_image(frame, source_crop_rect, input_type="image", resize=standard_size)
+    standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
+
+
+    renderModel_mini.reset_charactor(standard_img, standard_v[main_keypoints_index], standard_size=standard_size)
 
     ref_in_feature = renderModel_mini.net.infer_model.ref_in_feature
     ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten()
     # cv2.imwrite(os.path.join(out_path, 'ref.png'), renderModel_mini.ref_img_save)
-    # 保留两位小数
     rounded_array = np.round(ref_in_feature, 6)
 
     # Combine all data into a single JSON object
@@ -242,8 +159,6 @@ def data_preparation_web(path):
     os.makedirs(out_path, exist_ok=True)
     pts_3d, vid_width,vid_height = step0_keypoints(video_path, out_path)
     list_source_crop_rect, list_standard_v = step1_crop_mouth(pts_3d, vid_width, vid_height)
-    # step2_generate_obj(list_source_crop_rect, list_standard_v, out_path)
-    # step3_generate_ref_tensor(video_path, out_path)
     generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path)
 
 def main():

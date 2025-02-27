@@ -171,27 +171,24 @@ def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520], 
     with open(Path_output_pkl, "wb") as f:
         pickle.dump(pts_3d, f)
 
-def data_preparation_mini(video_mouthOpen, video_mouthClose, video_dir_path, resize_option = False):
+def data_preparation_mini(video, video_dir_path, resize_option = False):
     new_data_path = os.path.join(video_dir_path, "data")
     os.makedirs(new_data_path, exist_ok=True)
     video_out_path = "{}/circle.mp4".format(new_data_path)
     # CirculateVideo(video_mouthClose, video_out_path, face_rect=[290, 190, 440, 350])
-    PrepareVideo(video_mouthClose, video_out_path, face_rect=None, resize_option = resize_option)
-    video_out_path = "{}/ref.mp4".format(new_data_path)
-    PrepareVideo(video_mouthOpen, video_out_path, face_rect=None)
+    PrepareVideo(video, video_out_path, face_rect=None, resize_option = resize_option)
 
 def main():
     # 检查命令行参数的数量
     if len(sys.argv) != 4:
-        print("Usage: python data_preparation_mini.py <张嘴视频> <闭嘴视频> <输出文件夹位置>")
+        print("Usage: python data_preparation_mini.py <静默视频> <输出文件夹位置>")
         sys.exit(1)  # 参数数量不正确时退出程序
 
     # 获取video_name参数
-    video_mouthOpen = sys.argv[1]
-    video_mouthClose = sys.argv[2]
-    video_dir_path = sys.argv[3]
+    video = sys.argv[1]
+    video_dir_path = sys.argv[2]
     print(f"Video dir path is set to: {video_dir_path}")
-    data_preparation_mini(video_mouthOpen, video_mouthClose, video_dir_path)
+    data_preparation_mini(video, video_dir_path)
 
 
 if __name__ == "__main__":
