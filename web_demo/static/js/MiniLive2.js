@@ -1,3 +1,6 @@
+let fps_enabled = true; // 全局参数，控制是否显示FPS
+let frameTimes = []; // 用于存储最近几帧的时间戳
+let ctxEl = canvasEl.getContext("2d");
 class VideoProcessor {
     constructor() {
         this.mp4box = MP4Box.createFile();
@@ -64,6 +67,9 @@ class VideoProcessor {
         canvas_video.width = videoW;
         canvas_video.height = videoH;
 
+        canvasEl.width = videoW;
+        canvasEl.height = videoH;
+
         this.videoDecoder = new VideoDecoder({
             output: this.handleVideoFrame.bind(this),
             error: (e) => console.error("VideoDecoder error:", e)
@@ -87,6 +93,8 @@ class VideoProcessor {
                 duration: videoFrame.duration,
                 timestamp: videoFrame.timestamp
             });
+            ctxEl.clearRect(0, 0, canvasEl.width, canvasEl.height);
+            ctxEl.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
             videoFrame.close();
 
             // 添加逆序帧逻辑
@@ -138,26 +146,6 @@ let asset_dir = "assets";
 let isPaused = false; // 标志位，控制是否暂停处理
 // 初始化处理器
 const videoProcessor = new VideoProcessor();
-// 获取 characterDropdown 元素
-const characterDropdown = document.getElementById('characterDropdown');
-
-// 检查元素是否存在
-if (characterDropdown) {
-    characterDropdown.addEventListener('change', async function() {
-        isPaused = true;
-        document.getElementById('startMessage').style.display = 'block';
-        asset_dir = this.value;
-        console.log('Selected character:', asset_dir); // 这里应该是 asset_dir 而不是 selectedCharacter
-        await videoProcessor.init(asset_dir + "/01.mp4", asset_dir + "/combined_data.json.gz");
-        await loadCombinedData();
-        await setupVertsBuffers();
-        isPaused = false;
-        // 启动绘制循环
-        await processVideoFrames();
-    });
-} else {
-    console.warn("characterDropdown 元素未找到，无法绑定事件监听器");
-}
 
 let frameIndex = 0;
 const frameInterval = 40;
@@ -188,8 +176,6 @@ let indexBuffer;
 let positionBuffer;
 const texture_bs = gl.createTexture();
 var bs_array = new Float32Array(12);
-
-const mat4 = glMatrix.mat4;
 
 let currentDataSetIndex;
 let lastDataSetIndex = -1;
@@ -414,6 +400,50 @@ async function newVideoTask() {
     document.getElementById('startMessage').style.display = 'none';
 }
 
+function cerateOrthoMatrix()
+{
+    const orthoMatrix = new Float32Array(16);
+
+// 定义正交投影参数
+const left = 0;
+const right = 128;
+const bottom = 0;
+const top = 128;
+const near = 1000;
+const far = -1000;
+
+// 计算各轴跨度
+const rl = right - left;    // 128
+const tb = top - bottom;    // 128
+const fn = far - near;      // -2000
+
+// 列主序填充正交投影矩阵
+// 第一列 (x)
+orthoMatrix[0] = 2 / rl;    // 2/128 = 0.015625
+orthoMatrix[1] = 0;
+orthoMatrix[2] = 0;
+orthoMatrix[3] = 0;
+
+// 第二列 (y)
+orthoMatrix[4] = 0;
+orthoMatrix[5] = 2 / tb;    // 2/128 = 0.015625
+orthoMatrix[6] = 0;
+orthoMatrix[7] = 0;
+
+// 第三列 (z)
+orthoMatrix[8] = 0;
+orthoMatrix[9] = 0;
+orthoMatrix[10] = -2 / fn;  // -2/-2000 = 0.001
+orthoMatrix[11] = 0;
+
+// 第四列 (平移)
+orthoMatrix[12] = -(right + left) / rl;  // -128/128 = -1
+orthoMatrix[13] = -(top + bottom) / tb;  // -128/128 = -1
+orthoMatrix[14] = -(far + near) / fn;    // -(-1000+1000)/-2000 = 0
+orthoMatrix[15] = 1;
+return orthoMatrix;
+}
+
 function render(mat_world, subPoints, bsArray) {
     if (isPaused) {
         // 如果暂停，直接返回，不处理帧
@@ -427,8 +457,7 @@ function render(mat_world, subPoints, bsArray) {
     gl.uniform1fv(gl.getUniformLocation(program, "bsVec"), bsArray);
 
     const projectionUniformLocation = gl.getUniformLocation(program, "gProjection");
-    const orthoMatrix = mat4.create();
-    mat4.ortho(orthoMatrix, 0, 128, 0, 128, 1000, -1000);
+    const orthoMatrix = cerateOrthoMatrix();
     gl.uniformMatrix4fv(projectionUniformLocation, false, orthoMatrix);
 
     gl.enable(gl.DEPTH_TEST);
@@ -468,6 +497,25 @@ async function processVideoFrames() {
     }
     const { img, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
     ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
+
+    // 计算并显示FPS
+    if (fps_enabled) {
+        const currentTime = performance.now();
+        const deltaTime = currentTime - lastFrameTime;
+        frameTimes.push(currentTime);
+
+        // 只保留最近1秒的帧时间
+        while (frameTimes.length > 0 && currentTime - frameTimes[0] > 1000) {
+            frameTimes.shift();
+        }
+
+        const fps = frameTimes.length;
+        ctx_video.fillStyle = 'white';
+        ctx_video.font = '16px Arial';
+        ctx_video.textAlign = 'right';
+        ctx_video.fillText(`FPS: ${fps}`, canvas_video.width - 10, 20);
+    }
+
     processDataSet(frameIndex);
     frameIndex++;
 
@@ -484,8 +532,6 @@ async function initMemory() {
     imageDataGlPtr = Module._malloc(imageDataSize);
     bsPtr = Module._malloc(12 * 4); // 12 floats for blend shape
 }
-
-
 async function processDataSet(currentDataSetIndex) {
     if (isPaused) {
         // 如果暂停，直接返回，不处理帧
@@ -496,23 +542,15 @@ async function processDataSet(currentDataSetIndex) {
 
     const currentpoints = dataSets[currentDataSetIndex].points;
 
-    let points = currentpoints;
+    const matrix = new Float32Array(16);
+    matrix.set(currentpoints.slice(0, 16));
 
-    let matrix = mat4.create();
-    mat4.set(
-        matrix,
-        points[0], points[1], points[2], points[3],
-        points[4], points[5], points[6], points[7],
-        points[8], points[9], points[10], points[11],
-        points[12], points[13], points[14], points[15]
-    );
-
-    const subPoints = points.slice(16);
+    const subPoints = currentpoints.slice(16);
     Module._updateBlendShape(bsPtr, 12 * 4);
     const bsArray = new Float32Array(Module.HEAPU8.buffer, bsPtr, 12);
 
     render(matrix, subPoints, bsArray);
-//    console.log("bsArray", bsArray);
+    // console.log("bsArray", bsArray);
     resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, 128, 128);
 
     const imageData = resizedCtx.getImageData(0, 0, 128, 128);
