@@ -180,7 +180,7 @@ def data_preparation_mini(video, video_dir_path, resize_option = False):
 
 def main():
     # 检查命令行参数的数量
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print("Usage: python data_preparation_mini.py <静默视频> <输出文件夹位置>")
         sys.exit(1)  # 参数数量不正确时退出程序
 

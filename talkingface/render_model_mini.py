@@ -4,16 +4,11 @@ import random
 import glob
 import torch
 import numpy as np
-import time
-from talkingface.utils import generate_face_mask, INDEX_LIPS_UPPER, INDEX_LIPS_LOWER, crop_mouth, main_keypoints_index
-import torch.nn.functional as F
-from talkingface.data.few_shot_dataset import select_ref_index
-device = "cuda" if torch.cuda.is_available() else "cpu"
-import pickle
 import cv2
 
 from talkingface.utils import draw_mouth_maps
 from talkingface.models.DINet_mini import input_height,input_width
+from talkingface.model_utils import device
 class RenderModel_Mini:
     def __init__(self):
         self.__net = None
@@ -23,8 +18,8 @@ class RenderModel_Mini:
         n_ref = 3
         source_channel = 3
         ref_channel = n_ref * 4
-        self.net = DINet(source_channel, ref_channel).cuda()
-        checkpoint = torch.load(ckpt_path)
+        self.net = DINet(source_channel, ref_channel, device == "cuda").to(device)
+        checkpoint = torch.load(ckpt_path, map_location=device)
         net_g_static = checkpoint['state_dict']['net_g']
         self.net.infer_model.load_state_dict(net_g_static)
         self.net.eval()
@@ -58,7 +53,7 @@ class RenderModel_Mini:
         self.ref_img_save = np.concatenate([i[:,:,:3] for i in ref_img_list], axis=1)
         self.ref_img = np.concatenate(ref_img_list, axis=2)
 
-        ref_tensor = torch.from_numpy(self.ref_img / 255.).float().permute(2, 0, 1).unsqueeze(0).cuda()
+        ref_tensor = torch.from_numpy(self.ref_img / 255.).float().permute(2, 0, 1).unsqueeze(0).to(device)
 
         self.net.ref_input(ref_tensor)
 

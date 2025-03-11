@@ -5,7 +5,8 @@ from scipy.io import wavfile
 import torch
 import librosa
 import pickle
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
 pca = None
 def LoadAudioModel(ckpt_path):
     # if method == "lstm":
@@ -30,7 +31,7 @@ def LoadRenderModel(ckpt_path, model_name = "one_ref"):
         n_ref = 5
         source_channel = 6
         ref_channel = n_ref * 6
-    net_g = DINet(source_channel, ref_channel).cuda()
+    net_g = DINet(source_channel, ref_channel).to(device)
     checkpoint = torch.load(ckpt_path)
     net_g_static = checkpoint['state_dict']['net_g']
     net_g.load_state_dict(net_g_static)

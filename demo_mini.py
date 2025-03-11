@@ -10,7 +10,7 @@ from talkingface.model_utils import LoadAudioModel, Audio2bs
 from talkingface.data.few_shot_dataset import get_image
 from mini_live.render import create_render_model
 from talkingface.models.DINet_mini import input_height,input_width
-
+from talkingface.model_utils import device
 def interface_mini(path, wav_path, output_video_path):
     # 加载音频模型
     Audio2FeatureModel = LoadAudioModel(r'checkpoint/lstm/lstm_model_epoch_325.pkl')
@@ -39,7 +39,7 @@ def interface_mini(path, wav_path, output_video_path):
     ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, 20, input_height//4, input_width//4])
 
     # 设置 ref_data 到渲染模型
-    renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data).float().cuda()
+    renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data).float().to(device)
 
     # 读取视频信息
     video_path = os.path.join(path, "01.mp4")
@@ -126,7 +126,7 @@ def interface_mini(path, wav_path, output_video_path):
         source_tensor = cv2.resize(list_standard_img[frame_index], (128, 128))
         source_tensor = torch.from_numpy(source_tensor / 255.).float().permute(2, 0, 1).unsqueeze(0)
 
-        warped_img = renderModel_mini.interface(source_tensor.cuda(), gl_tensor.cuda())
+        warped_img = renderModel_mini.interface(source_tensor.to(device), gl_tensor.to(device))
 
         image_numpy = warped_img.detach().squeeze(0).cpu().float().numpy()
         image_numpy = np.transpose(image_numpy, (1, 2, 0)) * 255.0

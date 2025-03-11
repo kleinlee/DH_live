@@ -4,7 +4,7 @@ import kaldi_native_fbank as knf
 from scipy.io import wavfile
 import torch
 import pickle
-device = "cuda" if torch.cuda.is_available() else "cpu"
+from model_utils import device
 import pickle
 import os
 def pca_process(x):

@@ -49,7 +49,7 @@ cd checkpoint
 unzip checkpoint files from [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 ### Prepare Your Video
 ```bash
-python data_preparation_mini.py video_data/000002/talk.mp4 video_data/000002/video.mp4 video_data/000002
+python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
 python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。

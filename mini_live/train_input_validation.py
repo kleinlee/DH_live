@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 from talkingface.data.DHLive_mini_dataset import Few_Shot_Dataset,data_preparation
 from talkingface.utils import *
+from talkingface.model_utils import device
 # video_list = glob.glob(r"E:\data\video\video\*.mp4")
 # video_list = [os.path.basename(i).split(".")[0] for i in video_list]
 
@@ -24,8 +25,6 @@ thickness = 4  # 0 、4、8
 video_list = video_list[105:125]
 
 dict_info = data_preparation(video_list)
-
-device = torch.device("cuda:0")
 test_set = Few_Shot_Dataset(dict_info, is_train=True, n_ref = 3)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=0, batch_size=1, shuffle=False)
 

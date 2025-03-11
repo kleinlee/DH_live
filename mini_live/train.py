@@ -18,7 +18,7 @@ import pandas as pd
 import torch.nn.functional as F
 import cv2
 from talkingface.data.DHLive_mini_dataset import Few_Shot_Dataset,data_preparation
-
+from talkingface.model_utils import device
 def Tensor2img(tensor_, channel_index):
     frame = tensor_[channel_index:channel_index + 3, :, :].detach().squeeze(0).cpu().float().numpy()
     frame = np.transpose(frame, (1, 2, 0)) * 255.0
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     '''
     training code of person image generation
     '''
+    assert device == "cuda", "不支持CPU训练"
     # load config
     opt = DINetTrainingOptions().parse_args()
 
