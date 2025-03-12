@@ -82,7 +82,7 @@ def create_interface():
         gr.Markdown("---")
 
         # 第二部分：上传音频文件并生成视频
-        gr.Markdown("## 第二部分：测试语音生成视频")
+        gr.Markdown("## 第二部分：测试语音生成视频(不支持linux和MacOS，请跳过此步)")
         gr.Markdown("""
         - 上传音频文件后，点击“生成视频”按钮，程序会调用 `demo_mini` 函数完成推理并生成视频。
         - 此步骤用于初步验证结果。网页demo请执行第三步。

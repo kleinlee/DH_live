@@ -7,7 +7,7 @@ import os
 import math
 import pickle
 import mediapipe as mp
-
+import shutil
 mp_face_mesh = mp.solutions.face_mesh
 mp_face_detection = mp.solutions.face_detection
 
@@ -172,10 +172,12 @@ def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520], 
         pickle.dump(pts_3d, f)
 
 def data_preparation_mini(video, video_dir_path, resize_option = False):
+    # 检测系统环境是否有ffmpeg
+    assert shutil.which('ffmpeg') is not None, "请安装ffmpeg并设置为环境变量"
+
     new_data_path = os.path.join(video_dir_path, "data")
     os.makedirs(new_data_path, exist_ok=True)
     video_out_path = "{}/circle.mp4".format(new_data_path)
-    # CirculateVideo(video_mouthClose, video_out_path, face_rect=[290, 190, 440, 350])
     PrepareVideo(video, video_out_path, face_rect=None, resize_option = resize_option)
 
 def main():

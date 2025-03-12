@@ -47,6 +47,8 @@ pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
 cd checkpoint
 ```
+注意如果可以选择安装CPU版本的pytorch:  pip install torch
+
 unzip checkpoint files from [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 ### Prepare Your Video
 ```bash
@@ -54,7 +56,7 @@ python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
 python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。
-### Run with Audio File
+### Run with Audio File ( linux and MacOS not supported!!! )
 语音文件必须是单通道16K Hz的wav文件格式。
 ```bash
 python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
