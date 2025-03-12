@@ -15,7 +15,8 @@ def LoadAudioModel(ckpt_path):
     #     Audio2FeatureModel.eval()
     from talkingface.models.audio2bs_lstm import Audio2Feature
     Audio2FeatureModel = Audio2Feature()  # 调用模型Model
-    Audio2FeatureModel.load_state_dict(torch.load(ckpt_path))
+    checkpoint = torch.load(ckpt_path, map_location=device)
+    Audio2FeatureModel.load_state_dict(checkpoint)
     Audio2FeatureModel = Audio2FeatureModel.to(device)
     Audio2FeatureModel.eval()
     return Audio2FeatureModel
