@@ -5,8 +5,8 @@ from scipy.io import wavfile
 import torch
 import librosa
 import pickle
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = "cpu"
 pca = None
 def LoadAudioModel(ckpt_path):
     # if method == "lstm":
