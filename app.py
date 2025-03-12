@@ -5,7 +5,7 @@ import subprocess
 import uuid
 from data_preparation_mini import data_preparation_mini
 from data_preparation_web import data_preparation_web
-from demo_mini import interface_mini
+
 
 # 自定义 CSS 样式
 css = """
@@ -38,6 +38,7 @@ def demo_mini(audio):
     os.system(ffmpeg_cmd)
     output_video_name = "video_data/tmp.mp4"
     asset_path = os.path.join(video_dir_path, "assets")
+    from demo_mini import interface_mini
     interface_mini(asset_path, wav_path, output_video_name)
     return output_video_name  # 返回生成的视频文件路径
 
