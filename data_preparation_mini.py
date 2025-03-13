@@ -1,4 +1,4 @@
-import uuid
+import subprocess
 import tqdm
 import numpy as np
 import cv2
@@ -8,35 +8,82 @@ import math
 import pickle
 import mediapipe as mp
 import shutil
+
+# 自定义异常类
+class VideoProcessingError(Exception):
+    """视频处理基类异常"""
+    pass
+
+class FFmpegError(VideoProcessingError):
+    """FFmpeg处理异常"""
+    pass
+
+class FaceDetectionError(VideoProcessingError):
+    """人脸检测异常"""
+    pass
+
+class FirstFrameFaceDetectionError(FaceDetectionError):
+    """首帧人脸检测异常"""
+    pass
+
+class FaceMeshDetectionError(VideoProcessingError):
+    """面部网格检测异常"""
+    pass
+
+class EnvironmentError(VideoProcessingError):
+    """环境配置错误"""
+    pass
+
 mp_face_mesh = mp.solutions.face_mesh
 mp_face_detection = mp.solutions.face_detection
 
-def detect_face(frame, min_detection_confidence = 0.5):
-    # 剔除掉多个人脸、大角度侧脸（鼻子不在两个眼之间）、部分人脸框在画面外、人脸像素低于80*80的
-    with mp_face_detection.FaceDetection(
-            model_selection=1, min_detection_confidence=min_detection_confidence) as face_detection:
-        results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        if not results.detections or len(results.detections) > 1:
-            return -1, None
-        rect = results.detections[0].location_data.relative_bounding_box
-        out_rect = [rect.xmin, rect.xmin + rect.width, rect.ymin, rect.ymin + rect.height]
-        nose_ = mp_face_detection.get_key_point(
-            results.detections[0], mp_face_detection.FaceKeyPoint.NOSE_TIP)
-        l_eye_ = mp_face_detection.get_key_point(
-            results.detections[0], mp_face_detection.FaceKeyPoint.LEFT_EYE)
-        r_eye_ = mp_face_detection.get_key_point(
-            results.detections[0], mp_face_detection.FaceKeyPoint.RIGHT_EYE)
-        # print(nose_, l_eye_, r_eye_)
-        if nose_.x > l_eye_.x or nose_.x < r_eye_.x:
-            return -2, out_rect
 
+def detect_face(frame: np.ndarray, min_detection_confidence: float = 0.5) -> list:
+    """人脸检测并验证有效性"""
+    with mp_face_detection.FaceDetection(
+            model_selection=1,
+            min_detection_confidence=min_detection_confidence
+    ) as face_detection:
+
+        results = face_detection.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+        # 人脸数量检查
+        if not results.detections:
+            raise FaceDetectionError("未检测到人脸")
+        if len(results.detections) > 1:
+            raise FaceDetectionError("检测到多个人脸")
+
+        detection = results.detections[0]
+        rect = detection.location_data.relative_bounding_box
+        out_rect = [
+            rect.xmin,
+            rect.xmin + rect.width,
+            rect.ymin,
+            rect.ymin + rect.height
+        ]
+
+        # 关键点验证
+        nose = mp_face_detection.get_key_point(
+            detection, mp_face_detection.FaceKeyPoint.NOSE_TIP)
+        left_eye = mp_face_detection.get_key_point(
+            detection, mp_face_detection.FaceKeyPoint.LEFT_EYE)
+        right_eye = mp_face_detection.get_key_point(
+            detection, mp_face_detection.FaceKeyPoint.RIGHT_EYE)
+
+        if nose.x > left_eye.x or nose.x < right_eye.x:
+            raise FaceDetectionError("人脸角度不符合要求，请提供正脸图片")
+
+        # 边界检查
         h, w = frame.shape[:2]
-        # print(frame.shape)
-        if out_rect[0] < 0 or out_rect[2] < 0 or out_rect[1] > w or out_rect[3] > h:
-            return -3, out_rect
-        if rect.width * w < 60 or rect.height * h < 60:
-            return -4, out_rect
-    return 1, out_rect
+        if (out_rect[0] < 0 or out_rect[2] < 0
+                or out_rect[1] > 1 or out_rect[3] > 1):
+            raise FaceDetectionError("人脸区域超出画面边界")
+
+        # 尺寸检查
+        if rect.width * w < 80 or rect.height * h < 80:
+            raise FaceDetectionError("人脸尺寸不能低于80*80像素")
+
+        return out_rect
 
 
 def calc_face_interact(face0, face1):
@@ -49,101 +96,129 @@ def calc_face_interact(face0, face1):
     return min(tmp0, tmp1)
 
 
-def detect_face_mesh(frame):
+def detect_face_mesh(frame: np.ndarray) -> np.ndarray:
+    """面部网格检测"""
     with mp_face_mesh.FaceMesh(
             static_image_mode=True,
             max_num_faces=1,
             refine_landmarks=True,
-            min_detection_confidence=0.5) as face_mesh:
+            min_detection_confidence=0.5
+    ) as face_mesh:
+
         results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        pts_3d = np.zeros([478, 3])
+        pts_3d = np.zeros((478, 3))
+
         if not results.multi_face_landmarks:
-            print("****** WARNING! No face detected! ******")
-        else:
-            image_height, image_width = frame.shape[:2]
-            for face_landmarks in results.multi_face_landmarks:
-                for index_, i in enumerate(face_landmarks.landmark):
-                    x_px = min(math.floor(i.x * image_width), image_width - 1)
-                    y_px = min(math.floor(i.y * image_height), image_height - 1)
-                    z_px = min(math.floor(i.z * image_width), image_width - 1)
-                    pts_3d[index_] = np.array([x_px, y_px, z_px])
+            raise FaceMeshDetectionError("未检测到面部网格")
+
+        image_height, image_width = frame.shape[:2]
+        for idx, landmark in enumerate(results.multi_face_landmarks[0].landmark):
+            pts_3d[idx] = [
+                min(math.floor(landmark.x * image_width), image_width - 1),
+                min(math.floor(landmark.y * image_height), image_height - 1),
+                min(math.floor(landmark.z * image_width), image_width - 1)
+            ]
         return pts_3d
 
 
-def ExtractFromVideo(video_path, face_rect=None):
+def extract_from_video(
+        video_path: str,
+        output_pkl_path: str
+) -> None:
+    """从视频提取关键点"""
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        return 0
+        raise VideoProcessingError("无法打开视频文件")
 
-    dir_path = os.path.dirname(video_path)
-    vid_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # 宽度
-    vid_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # 高度
+    try:
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        vid_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        vid_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-    totalFrames = cap.get(cv2.CAP_PROP_FRAME_COUNT)  # 总帧数
-    totalFrames = int(totalFrames)
-    pts_3d = np.zeros([totalFrames, 478, 3])
-    face_rect_list = []
+        pts_3d = np.zeros((total_frames, 478, 3))
+        face_rect = None
+        for frame_index in tqdm.tqdm(range(total_frames)):
+            ret, frame = cap.read()  # 按帧读取视频
+            # #到视频结尾时终止
+            if ret is False:
+                break
 
-    # os.makedirs("../preparation/{}/image".format(model_name))
-    for frame_index in tqdm.tqdm(range(totalFrames)):
-        ret, frame = cap.read()  # 按帧读取视频
-        # #到视频结尾时终止
-        if ret is False:
-            break
+            if frame_index == 0:
+                try:
+                    rect = detect_face(frame, 0.25)
+                    x_min = int(rect[0] * vid_width)
+                    y_min = int(rect[2] * vid_height)
+                    x_max = int(rect[1] * vid_width)
+                    y_max = int(rect[3] * vid_height)
+                except FaceDetectionError:
+                    # 尝试裁剪后检测
+                    cropped = frame[
+                              int(0.1 * vid_height):int(0.9 * vid_height),
+                              int(0.1 * vid_width):int(0.9 * vid_width)
+                              ]
+                    try:
+                        rect = detect_face(cropped, 0.25)
+                    except FaceDetectionError as e:
+                        raise FirstFrameFaceDetectionError("首帧人脸检测失败") from e
 
-        if frame_index == 0:
-            # 检测人脸
-            tag_, rect = detect_face(frame, min_detection_confidence = 0.25)
-            if tag_ != 1:
-                tag_, rect = detect_face(frame[int(0.1 * vid_height):int(0.9 * vid_height),
-                                         int(0.1 * vid_width):int(0.9 * vid_width)], min_detection_confidence=0.25)
-                assert tag_ == 1, "第一帧检测不到人脸"
-                x_min = int(rect[0] * vid_width + 0.1 * vid_width)
-                y_min = int(rect[2] * vid_height + 0.1 * vid_height)
-                x_max = int(rect[1] * vid_width + 0.1 * vid_width)
-                y_max = int(rect[3] * vid_height + 0.1 * vid_height)
-            else:
-                x_min = int(rect[0] * vid_width)
-                y_min = int(rect[2] * vid_height)
-                x_max = int(rect[1] * vid_width)
-                y_max = int(rect[3] * vid_height)
-            y_mid = (y_min + y_max) / 2.
-            x_mid = (x_min + x_max) / 2.
-            len_ = max(x_max - x_min, y_max - y_min)
-            face_rect = [x_mid - len_, y_mid - len_, x_mid + len_, y_mid + len_]
+                    # 转换坐标到原图
+                    x_min = int(rect[0] * vid_width + 0.1 * vid_width)
+                    y_min = int(rect[2] * vid_height + 0.1 * vid_height)
+                    x_max = int(rect[1] * vid_width + 0.1 * vid_width)
+                    y_max = int(rect[3] * vid_height + 0.1 * vid_height)
 
-        x_min, y_min, x_max, y_max = face_rect
-        seq_w, seq_h = x_max - x_min, y_max - y_min
-        x_mid, y_mid = (x_min + x_max) / 2, (y_min + y_max) / 2
-        crop_size = int(max(seq_w * 1.35, seq_h * 1.35))
-        x_min = int(max(0, x_mid - crop_size * 0.5))
-        y_min = int(max(0, y_mid - crop_size * 0.45))
-        x_max = int(min(vid_width, x_min + crop_size))
-        y_max = int(min(vid_height, y_min + crop_size))
+                y_mid = (y_min + y_max) / 2.
+                x_mid = (x_min + x_max) / 2.
+                len_ = max(x_max - x_min, y_max - y_min)
+                face_rect = [x_mid - len_, y_mid - len_, x_mid + len_, y_mid + len_]
+                x_min, y_min, x_max, y_max = face_rect
+                seq_w, seq_h = x_max - x_min, y_max - y_min
+                x_mid, y_mid = (x_min + x_max) / 2, (y_min + y_max) / 2
+                crop_size = int(max(seq_w * 1.35, seq_h * 1.35))
+                x_min = int(max(0, x_mid - crop_size * 0.5))
+                y_min = int(max(0, y_mid - crop_size * 0.45))
+                x_max = int(min(vid_width, x_min + crop_size))
+                y_max = int(min(vid_height, y_min + crop_size))
+                face_rect = (x_min, y_min, x_max, y_max)
 
-        frame_face = frame[y_min:y_max, x_min:x_max]
-        # print(y_min, y_max, x_min, x_max)
-        # cv2.imshow("s", frame_face)
-        # cv2.waitKey(10)
-        frame_kps = detect_face_mesh(frame_face)
-        pts_3d[frame_index] = frame_kps + np.array([x_min, y_min, 0])
+            # 裁剪人脸区域
+            x0, y0, x1, y1 = face_rect
+            face_region = frame[y0:y1, x0:x1]
+            # print(y_min, y_max, x_min, x_max)
+            # cv2.imshow("s", frame_face)
+            # cv2.waitKey(10)
+            try:
+                frame_kps = detect_face_mesh(face_region)
+            except FaceMeshDetectionError as e:
+                raise VideoProcessingError(f"第{frame_index}帧面部网格检测失败") from e
+            pts_3d[frame_index] = frame_kps + [x0, y0, 0]
 
-        # point_size = 1
-        # point_color = (0, 0, 255)  # BGR
-        # thickness = 4  # 0 、4、8
-        # for coor in pts_3d[frame_index]:
-        #     # coor = (coor +1 )/2.
-        #     cv2.circle(frame, (int(coor[0]), int(coor[1])), point_size, point_color, thickness)
-        # cv2.imshow("a", frame)
-        # cv2.waitKey(30)
-    cap.release()  # 释放视频对象
+
+
+            # point_size = 1
+            # point_color = (0, 0, 255)  # BGR
+            # thickness = 4  # 0 、4、8
+            # for coor in pts_3d[frame_index]:
+            #     # coor = (coor +1 )/2.
+            #     cv2.circle(frame, (int(coor[0]), int(coor[1])), point_size, point_color, thickness)
+            # cv2.imshow("a", frame)
+            # cv2.waitKey(30)
+        # 保存关键点
+        with open(output_pkl_path, "wb") as f:
+            pickle.dump(pts_3d, f)
+    finally:
+        cap.release()  # 释放视频对象
     return pts_3d
 
 
-def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520], resize_option = False):
+def prepare_video(
+        input_path: str,
+        output_path: str,
+        resize_option: bool = False
+) -> int:
     # 1 视频转换为25FPS
     if resize_option:
-        cap = cv2.VideoCapture(video_in_path)
+        cap = cv2.VideoCapture(input_path)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         scale = min(720 / width, 1280 / height)
@@ -153,32 +228,46 @@ def PrepareVideo(video_in_path, video_out_path, face_rect=[200, 200, 520, 520], 
         new_width = new_width //2*2
         new_height = new_height //2*2
         cap.release()
-        # 补全 FFmpeg 命令
-        ffmpeg_cmd = "ffmpeg -i {} -vf \"scale={}:{}\" -r 25 -an -y {}".format(video_in_path, new_width, new_height,
-                                                                               video_out_path)
+        ffmpeg_cmd = "ffmpeg -i {} -vf \"scale={}:{}\" -r 25 -an -y {}".format(input_path, new_width, new_height,
+                                                                               output_path)
     else:
-        ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -y {}".format(video_in_path, video_out_path)
-    os.system(ffmpeg_cmd)
-    print(ffmpeg_cmd)
+        ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -y {}".format(input_path, output_path)
+    try:
+        result = subprocess.run(
+            ffmpeg_cmd,
+            check=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            text=True
+        )
+        return 0
+    except subprocess.CalledProcessError as e:
+        raise FFmpegError(f"FFmpeg处理失败: {e.stderr}") from e
 
-    cap = cv2.VideoCapture(video_out_path)
-    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    cap.release()
-    print("视频帧数：", frames)
-    pts_3d = ExtractFromVideo(video_out_path, face_rect)
-    assert type(pts_3d) is np.ndarray and len(pts_3d) == frames,"关键点已提取"
-    Path_output_pkl = video_out_path[:-4] + ".pkl"
-    with open(Path_output_pkl, "wb") as f:
-        pickle.dump(pts_3d, f)
 
-def data_preparation_mini(video, video_dir_path, resize_option = False):
+
+def data_preparation_mini(input_video, video_dir_path, resize_option = False):
     # 检测系统环境是否有ffmpeg
-    assert shutil.which('ffmpeg') is not None, "请安装ffmpeg并设置为环境变量"
+    if not shutil.which("ffmpeg"):
+        raise EnvironmentError("FFmpeg未安装或不在PATH中，请安装ffmpeg并设置为环境变量")
 
-    new_data_path = os.path.join(video_dir_path, "data")
-    os.makedirs(new_data_path, exist_ok=True)
-    video_out_path = "{}/circle.mp4".format(new_data_path)
-    PrepareVideo(video, video_out_path, face_rect=None, resize_option = resize_option)
+    # 创建输出目录
+    data_dir = os.path.join(video_dir_path, "data")
+    os.makedirs(data_dir, exist_ok=True)
+
+    # 预处理视频
+    output_video = os.path.join(data_dir, "processed.mp4")
+    prepare_video(input_video, output_video, resize_option = resize_option)
+
+    # 提取关键点
+    output_pkl = output_video.replace(".mp4", ".pkl")
+    extract_from_video(output_video, output_pkl)
+    result = {
+        "status": "success",
+        "output_video": output_video,
+        "output_pkl": output_pkl
+    }
+    return result
 
 def main():
     # 检查命令行参数的数量
@@ -191,6 +280,7 @@ def main():
     video_dir_path = sys.argv[2]
     print(f"Video dir path is set to: {video_dir_path}")
     data_preparation_mini(video, video_dir_path)
+    print("Done!")
 
 
 if __name__ == "__main__":

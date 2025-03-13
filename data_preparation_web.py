@@ -14,7 +14,7 @@ import pickle
 
 
 def step0_keypoints(video_path, out_path):
-    Path_output_pkl = video_path + "/circle.pkl"
+    Path_output_pkl = video_path + "/processed.pkl"
     with open(Path_output_pkl, "rb") as f:
         pts_3d = pickle.load(f)
 
@@ -22,7 +22,7 @@ def step0_keypoints(video_path, out_path):
     smooth_array_ = smooth_array(pts_3d, weight=[0.02, 0.09, 0.78, 0.09, 0.02])
     pts_3d = smooth_array_.reshape(len(pts_3d), 478, 3)
 
-    video_path = os.path.join(video_path, "circle.mp4")
+    video_path = os.path.join(video_path, "processed.mp4")
     cap = cv2.VideoCapture(video_path)
     vid_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # 宽度
     vid_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # 高度
@@ -70,7 +70,6 @@ def step1_crop_mouth(pts_3d, vid_width, vid_height):
 def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, out_path):
     from mini_live.obj.obj_utils import generateRenderInfo, generateWrapModel
     from talkingface.run_utils import calc_face_mat
-    from mini_live.obj.utils import INDEX_MP_LIPS
     from mini_live.obj.wrap_utils import newWrapModel
     from talkingface.render_model_mini import RenderModel_Mini
 
@@ -96,11 +95,11 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     renderModel_mini = RenderModel_Mini()
     renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
 
-    Path_output_pkl = "{}/circle.pkl".format(video_path)
+    Path_output_pkl = "{}/processed.pkl".format(video_path)
     with open(Path_output_pkl, "rb") as f:
         ref_images_info = pickle.load(f)
 
-    video_path = "{}/circle.mp4".format(video_path)
+    video_path = "{}/processed.mp4".format(video_path)
     cap = cv2.VideoCapture(video_path)
     vid_frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     assert vid_frame_count > 0, "处理后的视频无有效帧"
