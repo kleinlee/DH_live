@@ -228,13 +228,20 @@ def prepare_video(
         new_width = new_width //2*2
         new_height = new_height //2*2
         cap.release()
-        ffmpeg_cmd = "ffmpeg -i {} -vf \"scale={}:{}\" -r 25 -an -y {}".format(input_path, new_width, new_height,
-                                                                               output_path)
+        vf_arg = f"scale={new_width}:{new_height}"
+        cmd = [
+            "ffmpeg", "-i", input_path,
+            "-vf", vf_arg,
+            "-r", "25", "-an", "-y", output_path
+        ]
     else:
-        ffmpeg_cmd = "ffmpeg -i {} -r 25 -an -y {}".format(input_path, output_path)
+        cmd = [
+            "ffmpeg", "-i", input_path,
+            "-r", "25", "-an", "-y", output_path
+        ]
     try:
         result = subprocess.run(
-            ffmpeg_cmd,
+            cmd,
             check=True,
             stderr=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
