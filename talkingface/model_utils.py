@@ -3,8 +3,6 @@ import numpy as np
 import kaldi_native_fbank as knf
 from scipy.io import wavfile
 import torch
-import librosa
-import pickle
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # device = "cpu"
 pca = None
@@ -38,29 +36,6 @@ def LoadRenderModel(ckpt_path, model_name = "one_ref"):
     net_g.load_state_dict(net_g_static)
     net_g.eval()
     return net_g
-
-def find_silence_frame(wav):
-    audio_energy = librosa.feature.rms(y=wav, frame_length=800, hop_length=320,
-                                       center=False)  # 对每一frame计算root-mean-square
-    audio_energy = np.transpose(audio_energy)  # [t,1]
-    energy = audio_energy[:2 * (len(audio_energy) // 2)]
-    energy = energy.reshape([-1, 2]).max(axis=1)  # downsample with max_pool
-    is_sil_mask = (energy < 1e-3).astype(int)
-    sil_index_list = []
-    for i in range(len(is_sil_mask)):
-        if i < 3 or i > len(is_sil_mask) - 4:
-            sil_index_list.append(is_sil_mask[i])
-        else:
-            if is_sil_mask[i] > 0:
-                sil_index_list.append(is_sil_mask[i])
-            else:
-                # 七帧里面有四帧都静音，且左右侧都有静音帧，则此帧判别为静音帧
-                if np.sum(is_sil_mask[i-3:i+4]) > 3 and np.sum(is_sil_mask[i-3:i+1]) > 0 and np.sum(is_sil_mask[i+1:i+4]) > 0:
-                    sil_index_list.append(1)
-                else:
-                    sil_index_list.append(0)
-    sil_index = np.where(sil_index_list)[0]
-    return sil_index
 
 
 def Audio2mouth(wavpath, Audio2FeatureModel,  method = "lstm"):
