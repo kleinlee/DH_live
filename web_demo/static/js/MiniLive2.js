@@ -144,6 +144,26 @@ class VideoProcessor {
 
 let asset_dir = "assets";
 let isPaused = false; // 标志位，控制是否暂停处理
+// 获取 characterDropdown 元素
+const characterDropdown = document.getElementById('characterDropdown');
+
+// 检查元素是否存在
+if (characterDropdown) {
+    characterDropdown.addEventListener('change', async function() {
+        isPaused = true;
+        document.getElementById('startMessage').style.display = 'block';
+        asset_dir = this.value;
+        console.log('Selected character:', asset_dir); 
+        await videoProcessor.init(asset_dir + "/01.mp4", asset_dir + "/combined_data.json.gz");
+        await loadCombinedData();
+        await setupVertsBuffers();
+        isPaused = false;
+        // 启动绘制循环
+        await processVideoFrames();
+    });
+} else {
+    console.warn("characterDropdown 元素未找到，无法绑定事件监听器");
+}
 // 初始化处理器
 const videoProcessor = new VideoProcessor();
 
