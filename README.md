@@ -62,9 +62,9 @@ pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
 cd checkpoint
 ```
-注意如果可以选择安装CPU版本的pytorch:  pip install torch
+注意如果没有GPU可以安装CPU版本的pytorch:  pip install torch
 
-unzip checkpoint files from [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
+Download and unzip checkpoint files.
 ### Prepare Your Video
 ```bash
 python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
@@ -86,6 +86,6 @@ python web_demo/server.py
 DH_live is licensed under the MIT License.
 
 ## 联系
-|  加我好友，请备注“进群”，拉你进去微信交流群。| 进入QQ群聊，分享看法和最新咨询。 |
-|-------------------|----------------------|
+|  加我好友，请备注“进群”，拉你进去微信交流群。| 进入QQ群聊，分享看法和最新资讯。                                                                        |
+|-------------------|------------------------------------------------------------------------------------------|
 | ![微信交流群](https://github.com/user-attachments/assets/b1f24ebb-153b-44b1-b522-14f765154110) | ![QQ群聊](https://github.com/user-attachments/assets/29bfef3f-438a-4b9f-ba09-e1926d1669cb) |
