@@ -23,7 +23,7 @@ let audioChunks = [];
 // 初始设置为语音模式
 function setVoiceMode() {
     isVoiceMode = true;
-    toggleButton.innerHTML = '<i class="fas fa-keyboard"></i>';
+    toggleButton.innerHTML = '<i class="material-icons">keyboard</i>';
     textInput.style.display = 'none';
     sendButton.style.display = 'none';
     voiceInputArea.style.display = 'flex';
@@ -32,7 +32,7 @@ function setVoiceMode() {
 // 初始设置为文字模式
 function setTextMode() {
     isVoiceMode = false;
-    toggleButton.innerHTML = '<i class="fas fa-microphone"></i>';
+    toggleButton.innerHTML = '<i class="material-icons">mic</i>';
     textInput.style.display = 'block';
     sendButton.style.display = 'block';
     voiceInputArea.style.display = 'none';
@@ -165,7 +165,7 @@ function sendTextMessage() {
         return;
     }
     isChatting = true;
-    sendButton.innerHTML = '<i class="fas fa-stop"></i>'; // 停止图标
+    sendButton.innerHTML = '<i class="material-icons">stop</i>';
     if (!audioContext || audioContext.state === 'closed') {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     } else if (audioContext.state === 'suspended') {
@@ -370,12 +370,12 @@ function user_abort() {
     audioQueue = []; // 清空音频队列
     isPlaying = false; // 标记音频播放结束
     isChatting = false;
-    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>'; // 发送图标
+    sendButton.innerHTML = '<i class="material-icons">send</i>'; // 发送图标
 }
 
 // 播放音频
 function playAudio() {
-    console.log("playAudio", audioQueue.length, isPlaying)
+    console.log("playAudio", audioQueue.length, isPlaying);
     if (!isPlaying) {
         if (audioQueue.length > 0) {
             let arrayBuffer = audioQueue.shift();
@@ -411,7 +411,7 @@ function playAudio() {
         } else {
             if (isEnding) {
                 isChatting = false;
-                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>'; // 发送图标
+                sendButton.innerHTML = '<i class="material-icons">send</i>'; // 发送图标
             }
         }
     }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI聊天</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="css/material-icons.css" rel="stylesheet">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -16,7 +16,7 @@
         }
 
         .top-area {
-            flex: 1;
+            height: 60%;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -135,14 +135,14 @@
     <div class="input-container">
         <div class="input-area" id="input-area">
             <button class="input-toggle" id="toggle-button">
-                <i class="fas fa-keyboard"></i>
+                <i class="material-icons">keyboard</i>
             </button>
             <div class="voice-input-area" id="voice-input-area">
                 <span>点击说话</span>
             </div>
             <input type="text" id="text-input" placeholder="发送消息" style="display: none;">
             <button class="send-button" id="send-button" style="display: none;">
-                <i class="fas fa-paper-plane"></i>
+                <i class="material-icons">send</i>
             </button>
         </div>
     </div>

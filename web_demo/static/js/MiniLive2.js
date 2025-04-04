@@ -153,7 +153,7 @@ if (characterDropdown) {
         isPaused = true;
         document.getElementById('startMessage').style.display = 'block';
         asset_dir = this.value;
-        console.log('Selected character:', asset_dir); 
+        console.log('Selected character:', asset_dir);
         await videoProcessor.init(asset_dir + "/01.mp4", asset_dir + "/combined_data.json.gz");
         await loadCombinedData();
         await setupVertsBuffers();
