@@ -23,7 +23,8 @@ DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/
 | duix.ai                      | 1200             | 单人训练   | 160        | 中高端手机APP                      |
 
 ### checkpoint
-All checkpoint files are moved to [baiduNetDisk](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
+All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
+[GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
 
 ### Key Features
 - **最低算力**: 推理一帧的算力39 Mflops，有多小？小于手机端大部分的人脸检测算法。
