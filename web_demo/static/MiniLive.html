@@ -98,22 +98,6 @@
     <script src="js/mp4box.all.min.js"></script>
     <script src="js/DHLiveMini.js"></script>
     <script src="js/MiniMateLoader.js"></script>
-    <script>
-(function() {
-    // 检测是否为iOS设备
-    const isIOS = () => {
-        // 包括iPad、iPhone、iPod的检测，并排除IE浏览器
-        return (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)
-            // 适配iPadOS 13+，其UserAgent包含Macintosh且支持多点触控
-            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    };
-
-    // 动态加载对应的脚本
-    const script = document.createElement('script');
-    script.src = isIOS() ? 'js/MiniLive2_IOS.js' : 'js/MiniLive2.js';
-    script.async = true; // 异步加载，不影响页面渲染
-    document.head.appendChild(script);
-})();
-</script>
+    <script src="js/MiniLive2.js"></script>
   </body>
 </html>

@@ -1,3 +1,25 @@
+// 判断是否为iOS系统
+const tag_ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// 判断iOS版本是否是17以上
+let tag_ios17 = false;
+if (tag_ios) {
+    // 从用户代理中提取iOS版本号
+    const match = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+    if (match && match[1]) {
+        const iosVersion = parseInt(match[1], 10);
+        tag_ios17 = iosVersion >= 17;
+
+        if (!tag_ios17) {
+            alert("iOS系统目前不支持iOS17以下版本，请升级后再试");
+        }
+    } else {
+        // 无法获取版本号的情况
+        alert("无法检测您的iOS版本，请确保使用iOS17或更高版本");
+    }
+}
+
 let fps_enabled = true; // 全局参数，控制是否显示FPS
 let frameTimes = []; // 用于存储最近几帧的时间戳
 let ctxEl = canvasEl.getContext("2d");
@@ -87,7 +109,36 @@ class VideoProcessor {
     }
 
     handleVideoFrame(videoFrame) {
-        createImageBitmap(videoFrame).then(img => {
+        if (tag_ios17)
+        {
+            createImageBitmap(videoFrame).then(img => {
+                ctxEl.clearRect(0, 0, canvasEl.width, canvasEl.height);
+                ctxEl.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
+                return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8});
+            }).then(blob => {
+                const sizeInMB = (blob.size / (1024 * 1024)).toFixed(2); // 保留两位小数
+                console.log('Blob size:', `${sizeInMB} MB`);
+                this.videoFrames.push({
+                    blob,
+                    duration: videoFrame.duration,
+                    timestamp: videoFrame.timestamp
+                });
+
+                videoFrame.close();
+
+                // 添加逆序帧逻辑
+                if (this.videoFrames.length === this.nbSampleTotal && !this.isReverseAdded) {
+
+                    this.sortVideoFrames();
+                    this.videoFrames.push(...[...this.videoFrames].reverse());
+                    this.isReverseAdded = true;
+                    console.log(`Total frames: ${this.videoFrames.length}`);
+                }
+            });
+        }
+        else
+        {
+            createImageBitmap(videoFrame).then(img => {
             this.videoFrames.push({
                 img,
                 duration: videoFrame.duration,
@@ -106,6 +157,7 @@ class VideoProcessor {
                 console.log(`Total frames: ${this.videoFrames.length}`);
             }
         });
+        }
     }
 
     handleSamples(trackId, ref, samples) {
@@ -515,8 +567,19 @@ async function processVideoFrames() {
     if (frameIndex >= videoProcessor.videoFrames.length) {
         frameIndex = 0; // 重新开始
     }
-    const { img, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
-    ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
+
+    if (tag_ios17)
+    {
+        const { blob, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
+        const img = await createImageBitmap(blob);
+        ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
+        img.close(); // 及时释放内存
+    }
+    else
+    {
+        const { img, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
+        ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
+    }
 
     // 计算并显示FPS
     if (fps_enabled) {
