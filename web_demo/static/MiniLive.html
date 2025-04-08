@@ -98,6 +98,31 @@
     <script src="js/mp4box.all.min.js"></script>
     <script src="js/DHLiveMini.js"></script>
     <script src="js/MiniMateLoader.js"></script>
-    <script src="js/MiniLive2.js"></script>
+    <script>
+        // 封装iOS检测函数
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        // 动态加载脚本
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // 根据平台加载合适的脚本
+        try {
+            await loadScript(isIOS() ? 'js/MiniLive2_IOS.js' : 'js/MiniLive2.js');
+        } catch (error) {
+            console.error('脚本加载失败:', error);
+            // 这里可以添加回退逻辑
+        }
+    </script>
   </body>
 </html>
