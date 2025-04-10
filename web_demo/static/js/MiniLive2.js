@@ -114,7 +114,7 @@ class VideoProcessor {
             createImageBitmap(videoFrame).then(img => {
                 ctxEl.clearRect(0, 0, canvasEl.width, canvasEl.height);
                 ctxEl.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
-                return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8});
+                return canvasEl.convertToBlob({ type: 'image/jpeg', quality: 0.8});
             }).then(blob => {
                 const sizeInMB = (blob.size / (1024 * 1024)).toFixed(2); // 保留两位小数
                 console.log('Blob size:', `${sizeInMB} MB`);
