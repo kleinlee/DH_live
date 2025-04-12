@@ -38,6 +38,8 @@ class VideoProcessor {
         this.mp4box.onSamples = this.handleSamples.bind(this);
 
         this.combinedData = null;
+        this.offscreenCanvas = null;
+        this.offscreenCtx = null;
     }
 
     async init(videoUrl, gzipUrl) {
@@ -92,6 +94,10 @@ class VideoProcessor {
         canvasEl.width = videoW;
         canvasEl.height = videoH;
 
+        this.offscreenCanvas = new OffscreenCanvas(videoW, videoH);
+        this.offscreenCtx = this.offscreenCanvas.getContext('2d', { alpha: false }); // 禁用 Alpha
+
+
         this.videoDecoder = new VideoDecoder({
             output: this.handleVideoFrame.bind(this),
             error: (e) => console.error("VideoDecoder error:", e)
@@ -112,9 +118,10 @@ class VideoProcessor {
         if (tag_ios17)
         {
             createImageBitmap(videoFrame).then(img => {
-                ctxEl.clearRect(0, 0, canvasEl.width, canvasEl.height);
-                ctxEl.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
-                return canvasEl.convertToBlob({ type: 'image/jpeg', quality: 0.8});
+                this.offscreenCtx.fillStyle = 'white';
+                this.offscreenCtx.fillRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+                this.offscreenCtx.drawImage(img, 0, 0);
+                return this.offscreenCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
             }).then(blob => {
                 const sizeInMB = (blob.size / (1024 * 1024)).toFixed(2); // 保留两位小数
                 console.log('Blob size:', `${sizeInMB} MB`);
