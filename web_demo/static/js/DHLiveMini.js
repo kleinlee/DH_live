@@ -4315,16 +4315,16 @@ var createQtAppInstance = ( () => {
             return (_processJson = Module["_processJson"] = Module["asm"]["processJson"]).apply(null, arguments)
         }
         ;
-        var _setRefData = Module["_setRefData"] = function() {
-            return (_setRefData = Module["_setRefData"] = Module["asm"]["setRefData"]).apply(null, arguments)
-        }
-        ;
         var _setAudioBuffer = Module["_setAudioBuffer"] = function() {
             return (_setAudioBuffer = Module["_setAudioBuffer"] = Module["asm"]["setAudioBuffer"]).apply(null, arguments)
         }
         ;
         var _updateBlendShape = Module["_updateBlendShape"] = function() {
             return (_updateBlendShape = Module["_updateBlendShape"] = Module["asm"]["updateBlendShape"]).apply(null, arguments)
+        }
+        ;
+        var _getAudioVad = Module["_getAudioVad"] = function() {
+            return (_getAudioVad = Module["_getAudioVad"] = Module["asm"]["getAudioVad"]).apply(null, arguments)
         }
         ;
         var ___errno_location = Module["___errno_location"] = function() {

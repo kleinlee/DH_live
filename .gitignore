@@ -14,3 +14,6 @@ video_data/teeth_ref/*_2.png
 !video_data/audio1.wav
 
 /web_demo/static/ios_test.html
+
+/websocket_demo/
+web_demo/models/

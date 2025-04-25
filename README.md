@@ -13,6 +13,7 @@ DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/
 - 2025-02-27 优化渲染、去除参照视频，目前只需要一段视频即可生成。
 - 2025-03-11 增加DH_live_mini的CPU支持。
 - 2025-04-09 增加对IOS17以上的长视频支持。
+- 2025-04-25 增加完整的实时对话服务，包含vad-asr-llm-tts-数字人全流程，请见web_demo/server_realtime.py。
 
 # 数字人方案对比
 
