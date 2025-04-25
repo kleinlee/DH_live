@@ -39,7 +39,7 @@
 ```bash
 python server_realtime.py
 ```
-打开浏览器，访问 http://localhost:8888/MiniLive_Realtime.html
+打开浏览器，访问 http://localhost:8888/MiniLive_RealTime.html
 
 
 如果只是需要简单演示服务：
@@ -76,7 +76,7 @@ server.py 提供了一个模拟对话服务的示例。它接收JSON格式的输
 ### 3. 全流程的实时语音对话
 下载相关模型（可以替换为其他类似模型）：
 
-ASR model: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-2025-04-01.tar.bz2
+ASR model: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
 TTS model: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-zh-hf-theresa.tar.bz2
 
 在voiceapi/llm.py中，按照OpneAI API格式配置大模型接口：
