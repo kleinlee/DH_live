@@ -52,7 +52,10 @@ python server.py
 
 ### 1. 替换对话服务网址
 
-在 static/js/dialog.js 文件中，找到第1行，将 http://localhost:8888/eb_stream 替换为您自己的对话服务网址。例如：
+对于全流程语音通话demo，在 static/js/dialog_realtime.js 文件中，找到第1行，将 http://localhost:8888/eb_stream 替换为您自己的对话服务网址。例如：
+https://your-dialogue-service.com/eb_stream, 将第二行的websocket url也改为"wss://your-dialogue-service.com/asr?samplerate=16000"
+
+对于简单演示demo，在 static/js/dialog.js 文件中，找到第1行，将 http://localhost:8888/eb_stream 替换为您自己的对话服务网址。例如：
 https://your-dialogue-service.com/eb_stream
 
 ### 2. 模拟对话服务
@@ -106,8 +109,6 @@ llm_client = OpenAI(
     api_key=api_key,
 )
 ```
-
-要更换人物形象，请将新形象包中的文件替换 assets 文件夹中的对应文件。确保新文件的命名和路径与原有文件一致，以避免引用错误。
 
 ### 4. 更换人物形象
 
