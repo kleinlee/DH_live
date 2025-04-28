@@ -69,7 +69,54 @@
                 color: #333;
                 z-index: -2;
             }
+            #dropdownContainer, #voiceDropdownContainer {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                z-index: 10;
+            }
 
+            #voiceDropdownContainer {
+                top: 70px;
+            }
+
+            #characterDropdown, #voiceDropdown {
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                padding: 10px 40px 10px 20px;
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                background-color: #fff;
+                border: 2px solid #ccc;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                cursor: pointer;
+                outline: none;
+                transition: all 0.3s ease;
+            }
+
+            #characterDropdown:hover, #voiceDropdown:hover {
+                border-color: #888;
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            #characterDropdown:focus, #voiceDropdown:focus {
+                border-color: #555;
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            #dropdownContainer::after, #voiceDropdownContainer::after {
+                content: '▼';
+                position: absolute;
+                top: 50%;
+                right: 15px;
+                transform: translateY(-50%);
+                pointer-events: none;
+                color: #666;
+                font-size: 12px;
+            }
             #canvasEl {
                 position: absolute;
                 left: -9999px;  /* 移出可视区域 */
@@ -81,18 +128,30 @@
         </style>
     </head>
     <body>
+        <div id="dropdownContainer">
+            <select id="characterDropdown">
+                <option value="assets">男性一</option>
+                <option value="assets2">女性一</option>
+            </select>
+        </div>
+        <div id="voiceDropdownContainer">
+            <select id="voiceDropdown">
+                <option value=0>温柔女</option>
+                <option value=1>温柔男</option>
+                <option value=2>甜美女</option>
+                <option value=3>青年女</option>
+                <option value=4>磁性男</option>
+            </select>
+        </div>
+
         <figure style="overflow:visible;" id="loadingSpinner">
             <strong>MiniMates: loading...</strong>
         </figure>
         <canvas id="canvasEl"></canvas>
-        <!-- Visible canvas elements -->
         <canvas id="canvas_video"></canvas>
-
         <canvas id="canvas_gl" width="128" height="128"></canvas>
-
         <div id="screen"></div>
         <iframe id="screen2" src="dialog_RealTime.html" frameborder="0" style="display: none;"></iframe>
-        <!-- 添加"请点击开始"的元素 -->
         <div id="startMessage">加载中</div>
         <script src="js/pako.min.js"></script>
         <script src="js/mp4box.all.min.js"></script>

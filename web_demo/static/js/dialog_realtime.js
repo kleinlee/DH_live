@@ -1,14 +1,19 @@
 let server_url = "http://localhost:8888/eb_stream"
 let websocket_url = "ws://localhost:8888/asr?samplerate=16000"
-let audioQueue = []; // 存储待播放的音频数据
+let ws = null;   // ASR使用websocket双向流式连接
+
+let isRecording = false; // 标记当前是否正在录音
 let isPlaying = false; // 标记是否正在播放音频
+
+let audioQueue = []; // 存储待播放的音频数据
+
 let audioContext; // 定义在全局以便在用户交互后创建或恢复
 let isEnding = false; // SSE传输已结束
-let isChatting = false; // 本轮聊天进程
+
 let isNewChat = true;
-let controller;
+let controller = null;
 let buffer = ""; // 缓存区，用于存储不完整的 JSON 块
-let isRecording = false; // 标记当前是否正在录音
+
 
 const toggleButton = document.getElementById('toggle-button');
 const inputArea = document.getElementById('input-area');
@@ -21,10 +26,9 @@ let isVoiceMode = true;
 //let mediaRecorder;
 let asr_audio_recorder = new PCMAudioRecorder();
 let asr_input_text = "";
-let isNewASR = true;          // 开启新一轮的ASR
+let isNewASR = true;          // 开启新一轮的ASR,ASR返回文本要重新单独显示
 
 let last_voice_time = null;   // 上一次检测到人声的时间
-let asr_recording = false; // 检测到人声开启ASR
 let last_3_voice_samples = [];
 const VAD_SILENCE_DURATION = 800;  // 800ms不说话判定为讲话结束
 
@@ -35,6 +39,7 @@ function setVoiceMode() {
     textInput.style.display = 'none';
     sendButton.style.display = 'none';
     voiceInputArea.style.display = 'flex';
+    voiceInputText.textContent = '点击重新开始对话'; // 恢复文字
 }
 
 // 初始设置为文字模式
@@ -43,9 +48,18 @@ function setTextMode() {
     toggleButton.innerHTML = '<i class="material-icons">mic</i>';
     textInput.style.display = 'block';
     sendButton.style.display = 'block';
-    voiceInputAre
-    a.style.display = 'none';
+    voiceInputArea.style.display = 'none';
 }
+
+// 切换输入模式
+toggleButton.addEventListener('click', () => {
+    console.log("toggleButton", isVoiceMode)
+    if (isVoiceMode) {
+        setTextMode();
+    } else {
+        setVoiceMode();
+    }
+});
 
 async function running_audio_recorder() {
     await asr_audio_recorder.connect(async (pcmData) => {
@@ -105,7 +119,15 @@ async function start_new_round() {
     isRecording = false;
     isNewASR = true;
     asr_input_text = "";
-    await running_audio_recorder();
+
+    if (isVoiceMode)
+    {
+        if (!ws)
+        {
+            await asr_realtime_ws();
+        }
+        await running_audio_recorder();
+    }
 }
 
 async function asr_realtime_ws() {
@@ -148,15 +170,34 @@ async function asr_realtime_ws() {
 voiceInputArea.addEventListener('click', async () => {
 //    event.preventDefault(); // 阻止默认行为
     console.log("voiceInputArea click")
-    await asr_realtime_ws();
+    await user_abort();
+    voiceInputText.textContent = '点击重新开始对话'; // 恢复文字
     await start_new_round();
 });
 
 // 文字输入逻辑
-sendButton.addEventListener('click', sendTextMessage);
+sendButton.addEventListener('click', (e) => {
+    const icon = sendButton.querySelector('i.material-icons');
+    // 检查是否存在图标且图标内容为 'stop'
+    if (icon && icon.textContent.trim() === 'stop') {
+        user_abort();
+        return;
+    }
+    const inputValue = textInput.value.trim();
+    if (inputValue) {
+        controller = new AbortController();
+        addMessage(inputValue, true, true);
+        sendTextMessage(inputValue);
+    }
+});
 textInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        sendTextMessage();
+        const inputValue = textInput.value.trim();
+        if (inputValue) {
+            controller = new AbortController();
+            addMessage(inputValue, true, true);
+            sendTextMessage(inputValue);
+        }
     }
 });
 
@@ -190,11 +231,7 @@ setVoiceMode();
 
 // 发送文字消息
 function sendTextMessage(inputValue) {
-    if (isChatting) {
-        user_abort();
-        return;
-    }
-    isChatting = true;
+    sendButton.innerHTML = '<i class="material-icons">stop</i>';
     if (!audioContext || audioContext.state === 'closed') {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     } else if (audioContext.state === 'suspended') {
@@ -209,7 +246,12 @@ function sendTextMessage(inputValue) {
         let characterName = "";
         const voiceDropdown = window.parent.document.getElementById('voiceDropdown');
         if (voiceDropdown) {
-            characterName = voiceDropdown.value;
+            const parsedValue = parseInt(voiceDropdown.value, 10);
+            if (!isNaN(parsedValue)) {
+                characterName = parsedValue;
+            } else {
+                characterName = ""; // 默认值
+            }
         }
         fetch(server_url, {
             method: 'post',
@@ -281,16 +323,29 @@ function base64ToUint8Array(base64) {
 }
 
 // 用户中断操作
-function user_abort() {
-    controller.abort();
+async function user_abort() {
+    if (isVoiceMode)
+    {
+        await asr_audio_recorder.stop();
+        if (ws) {
+            isASRActive = false;
+            ws.close();
+            ws = null;
+        }
+    }
+
+    if (controller)
+    {
+        controller.abort();
+    }
     if (audioContext && audioContext.state !== 'closed') {
         audioContext.close().then(() => {
             console.log('AudioContext已关闭');
         });
     }
+    parent.Module._clearAudio();
     audioQueue = []; // 清空音频队列
     isPlaying = false; // 标记音频播放结束
-    isChatting = false;
     sendButton.innerHTML = '<i class="material-icons">send</i>'; // 发送图标
 }
 
@@ -331,7 +386,6 @@ async function playAudio() {
             });
         } else {
             if (isEnding) {
-                isChatting = false;
                 sendButton.innerHTML = '<i class="material-icons">send</i>'; // 发送图标
                 await start_new_round();
             }

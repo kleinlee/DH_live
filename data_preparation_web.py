@@ -108,6 +108,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
 
     standard_size = 128
     frame_index = 0
+    # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ret, frame = cap.read()
     cap.release()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)

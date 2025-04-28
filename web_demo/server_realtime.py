@@ -211,7 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("--asr-lang", type=str, default='zh',
                         help="ASR language, zh, en, ja, ko, yue")
 
-    parser.add_argument("--tts-model", type=str, default='vits-zh-hf-theresa',
+    parser.add_argument("--tts-model", type=str, default='sherpa-onnx-vits-zh-ll',
                         help="TTS model name: vits-zh-hf-theresa, vits-melo-tts-zh_en")
 
     args = parser.parse_args()

@@ -20,7 +20,7 @@
 项目根目录/
 ├── models/                  # 本地TTS及ASR模型
 │   ├── sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/  # ASR
-│   ├── vits-zh-hf-theresa/  # TTS                              
+│   ├── sherpa-onnx-vits-zh-ll/  # TTS                              
 ├── static/                  # 静态资源文件夹
 │   ├── assets/              # 人物形象资源文件夹
 │   ├── common/              # 公共资源文件夹
@@ -80,7 +80,7 @@ server.py 提供了一个模拟对话服务的示例。它接收JSON格式的输
 下载相关模型（可以替换为其他类似模型）：
 
 ASR model: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
-TTS model: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-zh-hf-theresa.tar.bz2
+TTS model: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2
 
 在voiceapi/llm.py中，按照OpneAI API格式配置大模型接口：
 

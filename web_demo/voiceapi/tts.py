@@ -18,6 +18,14 @@ splitter = re.compile(r'[,，。.!?！？;；、\n]')
 _tts_engines = {}
 
 tts_configs = {
+    'sherpa-onnx-vits-zh-ll': {
+        'model': 'model.onnx',
+        'lexicon': 'lexicon.txt',
+        'dict_dir': 'dict',
+        'tokens': 'tokens.txt',
+        'sample_rate': 16000,
+        # 'rule_fsts': ['phone.fst', 'date.fst', 'number.fst'],
+    },
     'vits-zh-hf-theresa': {
         'model': 'theresa.onnx',
         'lexicon': 'lexicon.txt',

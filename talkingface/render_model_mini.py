@@ -45,7 +45,7 @@ class RenderModel_Mini:
 
         teeth_ref_img = os.path.join(current_dir, r"../video_data/teeth_ref/*.png")
         teeth_ref_img = random.sample(glob.glob(teeth_ref_img), 1)[0]
-        teeth_ref_img = teeth_ref_img.replace("_2", "")
+        # teeth_ref_img = teeth_ref_img.replace("_2", "")
         teeth_ref_img = cv2.imread(teeth_ref_img, cv2.IMREAD_UNCHANGED)
         ref_img_list.append(teeth_ref_img)
         ref_img_list.append(teeth_ref_img)
