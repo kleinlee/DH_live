@@ -1,18 +1,27 @@
 let server_url = "http://localhost:8888/eb_stream"
 let websocket_url = "ws://localhost:8888/asr?samplerate=16000"
 let ws = null;   // ASR使用websocket双向流式连接
+let isVoiceMode = true;                 // 默认使用语音模式
 
-let isRecording = false; // 标记当前是否正在录音
+// 录音阶段
+let asr_audio_recorder = new PCMAudioRecorder();
+let isRecording = false;     // 标记当前录音是否向ws传输
+let asr_input_text = "";     // 从ws接收到的ASR识别后的文本
+let isNewASR = true;          // 开启新一轮的ASR,ASR返回文本要重新单独显示
+let last_voice_time = null;   // 上一次检测到人声的时间
+let last_3_voice_samples = [];
+const VAD_SILENCE_DURATION = 800;  // 800ms不说话判定为讲话结束
+
+// SSE 阶段（申请流式传输LLM+TTS的阶段）
+let sse_startpoint = true;                // SSE传输开始标志
+let sse_endpoint = false;                 // SSE传输结束标志
+let sse_controller = null;                // SSE网络中断控制器，可用于打断传输
+let sse_data_buffer = "";                 // SSE网络传输数据缓存区，用于存储不完整的 JSON 块
+
+// 播放音频阶段
 let isPlaying = false; // 标记是否正在播放音频
-
 let audioQueue = []; // 存储待播放的音频数据
-
 let audioContext; // 定义在全局以便在用户交互后创建或恢复
-let isEnding = false; // SSE传输已结束
-
-let isNewChat = true;
-let controller = null;
-let buffer = ""; // 缓存区，用于存储不完整的 JSON 块
 
 
 const toggleButton = document.getElementById('toggle-button');
@@ -22,15 +31,6 @@ const sendButton = document.getElementById('send-button');
 const textInput = document.getElementById('text-input');
 const voiceInputArea = document.getElementById('voice-input-area');
 const voiceInputText = voiceInputArea.querySelector('span'); // 获取显示文字的 span 元素
-let isVoiceMode = true;
-//let mediaRecorder;
-let asr_audio_recorder = new PCMAudioRecorder();
-let asr_input_text = "";
-let isNewASR = true;          // 开启新一轮的ASR,ASR返回文本要重新单独显示
-
-let last_voice_time = null;   // 上一次检测到人声的时间
-let last_3_voice_samples = [];
-const VAD_SILENCE_DURATION = 800;  // 800ms不说话判定为讲话结束
 
 // 初始设置为语音模式
 function setVoiceMode() {
@@ -185,7 +185,6 @@ sendButton.addEventListener('click', (e) => {
     }
     const inputValue = textInput.value.trim();
     if (inputValue) {
-        controller = new AbortController();
         addMessage(inputValue, true, true);
         sendTextMessage(inputValue);
     }
@@ -194,7 +193,6 @@ textInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         const inputValue = textInput.value.trim();
         if (inputValue) {
-            controller = new AbortController();
             addMessage(inputValue, true, true);
             sendTextMessage(inputValue);
         }
@@ -238,9 +236,9 @@ function sendTextMessage(inputValue) {
         audioContext.resume(); // 如果处于暂停状态，则恢复
     }
     if (inputValue) {
-        controller = new AbortController();
-        isEnding = false;
-        isNewChat = true;
+        sse_controller = new AbortController();
+        sse_startpoint = true;
+        sse_endpoint = false;
         textInput.value = "";
         // 获取音色名称
         let characterName = "";
@@ -257,7 +255,7 @@ function sendTextMessage(inputValue) {
             method: 'post',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({"input_mode": "text", 'prompt': inputValue, 'voice_id': characterName, 'voice_speed': "" }),
-            signal: controller.signal
+            signal: sse_controller.signal
         })
             .then(response => response.body)
             .then(body => {
@@ -269,25 +267,25 @@ function sendTextMessage(inputValue) {
                             return;
                         }
                         const chunk = decoder.decode(value, { stream: true });
-                        buffer += chunk; // 将新数据追加到缓存区
+                        sse_data_buffer += chunk; // 将新数据追加到缓存区
 
                         // 根据换行符拆分缓存区中的数据
-                        const chunks = buffer.split("\n");
+                        const chunks = sse_data_buffer.split("\n");
                         // 处理完整的 JSON 块
                         for (let i = 0; i < chunks.length - 1; i++) {
                             try {
                                 const data = JSON.parse(chunks[i]);
-                                console.log("Received text:", data.text, isNewChat);
+                                console.log("Received text:", data.text, sse_startpoint);
                                 console.log("Received audio (Base64):", data.audio.length);
-                                addMessage(data.text, false, isNewChat);
-                                isNewChat = false;
+                                addMessage(data.text, false, sse_startpoint);
+                                sse_startpoint = false;
                                 // 将 Base64 音频数据转换为 Uint8Array
                                 if (data.audio)
                                 {
                                     const audioUint8Array = base64ToUint8Array(data.audio);
                                     audioQueue.push(audioUint8Array); // 将 Uint8Array 推入队列
                                 }
-                                isEnding = data.endpoint;
+                                sse_endpoint = data.endpoint;
                                 playAudio();
                             } catch (error) {
                                 console.error("Error parsing chunk:", error);
@@ -295,7 +293,7 @@ function sendTextMessage(inputValue) {
                         }
 
                         // 将最后一个不完整的块保留在缓存区中
-                        buffer = chunks[chunks.length - 1];
+                        sse_data_buffer = chunks[chunks.length - 1];
 
                         return read();
                     });
@@ -334,9 +332,9 @@ async function user_abort() {
         }
     }
 
-    if (controller)
+    if (sse_controller)
     {
-        controller.abort();
+        sse_controller.abort();
     }
     if (audioContext && audioContext.state !== 'closed') {
         audioContext.close().then(() => {
@@ -385,7 +383,7 @@ async function playAudio() {
                 console.error('Decode audio error', error);
             });
         } else {
-            if (isEnding) {
+            if (sse_endpoint) {
                 sendButton.innerHTML = '<i class="material-icons">send</i>'; // 发送图标
                 await start_new_round();
             }
