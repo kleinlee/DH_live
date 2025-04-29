@@ -12,6 +12,8 @@
 | LLM    | 云端服务     |
 | TTS    | 服务器本地   |
 | 数字人  | Web本地     |
+
+
 ![](flowchart.jpg)
 ## 目录结构
 
@@ -23,28 +25,34 @@
 │   ├── sherpa-onnx-vits-zh-ll/  # TTS                              
 ├── static/                  # 静态资源文件夹
 │   ├── assets/              # 人物形象资源文件夹
+│   ├── assets2/             # 人物2形象资源文件夹
 │   ├── common/              # 公共资源文件夹
 │   ├── css/                 # CSS样式文件夹
 │   ├── js/                  # JavaScript脚本文件夹
 │   ├── DHLiveMini.wasm      # AI推理组件
-│   ├── dialog.html          # 对话页面
-│   └── MiniLive.html        # 数字人视频流主页面
+│   ├── dialog.html          # MiniLive.html包含的纯对话iframe页面
+│   ├── dialog_RealTime.html # MiniLive_RealTime.html包含的纯对话iframe页面
+│   └── MiniLive.html        # 数字人视频流主页面（简单demo）
+│   └── MiniLive_RealTime.html # 数字人视频流主页面（实时语音对话页面，推荐！）
 ├── voiceapi/                # asr、llm、tts具体设置
 └── server.py                # 启动网页服务的Python程序
+└── server_realtime.py       # 启动实时语音对话网页服务的Python程序
 ```
 ### 运行项目
 （New！）启动实时语音对话服务：
 
 （注意需要下载本地ASR&TTS模型，并设置openai API进行大模型对话），请看下方配置说明。
 ```bash
-python server_realtime.py
+# 切换到DH_live根目录下
+python web_demo/server_realtime.py
 ```
 打开浏览器，访问 http://localhost:8888/MiniLive_RealTime.html
 
 
 如果只是需要简单演示服务：
 ```bash
-python server.py
+# 切换到DH_live根目录下
+python web_demo/server.py
 ```
 打开浏览器，访问 http://localhost:8888/MiniLive.html
 
@@ -80,6 +88,7 @@ server.py 提供了一个模拟对话服务的示例。它接收JSON格式的输
 下载相关模型（可以替换为其他类似模型）：
 
 ASR model: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
+
 TTS model: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2
 
 在voiceapi/llm.py中，按照OpneAI API格式配置大模型接口：
