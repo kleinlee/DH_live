@@ -104,6 +104,10 @@
         }
 
         .voice-input-area {
+            user-select: none;
+            -webkit-user-select: none;     /* 兼容Safari和旧版浏览器 */
+            -webkit-touch-callout: none;   /* 禁用iOS长按菜单 */
+
             display: flex;
             align-items: center;
             justify-content: center;

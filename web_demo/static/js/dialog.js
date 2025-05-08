@@ -49,7 +49,7 @@ toggleButton.addEventListener('click', () => {
 });
 
 // 语音输入逻辑
-voiceInputArea.addEventListener('click', async () => {
+voiceInputArea.addEventListener('click', async (event) => {
     event.preventDefault(); // 阻止默认行为
 
     if (isRecording) {

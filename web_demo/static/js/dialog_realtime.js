@@ -167,8 +167,8 @@ async function asr_realtime_ws() {
 }
 
 // 语音输入逻辑
-voiceInputArea.addEventListener('click', async () => {
-//    event.preventDefault(); // 阻止默认行为
+voiceInputArea.addEventListener('click', async (event) => {
+    event.preventDefault(); // 阻止默认行为
     console.log("voiceInputArea click")
     await user_abort();
     voiceInputText.textContent = '点击重新开始对话'; // 恢复文字
