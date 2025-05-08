@@ -1,8 +1,10 @@
 # Mobile and Web Real-time Live Streaming Digital Human! 
 # 实时数字人 全网最快
-Notes：目前项目主要维护DH_live_mini, 目前最快的数字人方案，没有之一，项目含有网页推理的案例，不依赖任何GPU，可在任何手机设备实时运行。原版DH_live已不再获支持，希望慎重考虑使用。原版使用方法参见[here](https://github.com/kleinlee/DH_live/blob/main/README_DH_live.md)。
+Notes：目前项目主要维护DH_live_mini, 目前最快的2D视频数字人方案，没有之一，项目含有网页推理的案例，不依赖任何GPU，可在任何手机设备实时运行。
 
-DHLive_mini手机浏览器直接推理[bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
+原版DH_live已不再获支持，希望慎重考虑使用。原版使用方法参见另一分支 [here](https://github.com/kleinlee/DH_live/blob/main_250508/README_DH_live.md)。
+
+DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
 
 ![微信图片_20250209153828](https://github.com/user-attachments/assets/32650fac-3885-4c98-886f-66258ef891a7)
 
