@@ -13,8 +13,8 @@
 | TTS    | 服务器本地   |
 | 数字人  | Web本地     |
 
+![deepseek_mermaid_20250428_94e921](https://github.com/user-attachments/assets/505a1602-86c8-4b80-b692-9f6c9dcb19ac)
 
-![](flowchart.jpg)
 ## 目录结构
 
 本项目目录结构如下：
