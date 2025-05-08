@@ -84,6 +84,9 @@ python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
 python web_demo/server.py
 ```
 可以打开 localhost:8888/static/MiniLive.html。
+## Algorithm Architecture
+![deepseek_mermaid_20250506_c244f8](https://github.com/user-attachments/assets/548f65aa-3ede-4657-bf4e-56b3c93272bb)
+
 ## License
 DH_live is licensed under the MIT License.
 
