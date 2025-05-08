@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 
 from talkingface.utils import draw_mouth_maps
-from talkingface.models.DINet_mini import input_height,input_width
+from talkingface.models.DINet_mini import input_height,input_width,model_size
 from talkingface.model_utils import device
 class RenderModel_Mini:
     def __init__(self):
@@ -32,10 +32,10 @@ class RenderModel_Mini:
         # cv2.waitKey(-1)
         # cv2.imshow("ss", ref_img)
         # cv2.waitKey(-1)
-        ref_face_edge = cv2.resize(ref_face_edge, (128, 128))
-        ref_img = cv2.resize(ref_img, (128, 128))
-        w_pad = int((128 - input_width) / 2)
-        h_pad = int((128 - input_height) / 2)
+        ref_face_edge = cv2.resize(ref_face_edge, (model_size, model_size))
+        ref_img = cv2.resize(ref_img, (model_size, model_size))
+        w_pad = int((model_size - input_width) / 2)
+        h_pad = int((model_size - input_height) / 2)
 
         ref_img = np.concatenate(
             [ref_img[h_pad:-h_pad, w_pad:-w_pad, :3], ref_face_edge[h_pad:-h_pad, w_pad:-w_pad, :1]], axis=2)
@@ -47,6 +47,7 @@ class RenderModel_Mini:
         teeth_ref_img = random.sample(glob.glob(teeth_ref_img), 1)[0]
         # teeth_ref_img = teeth_ref_img.replace("_2", "")
         teeth_ref_img = cv2.imread(teeth_ref_img, cv2.IMREAD_UNCHANGED)
+        teeth_ref_img = cv2.resize(teeth_ref_img, (input_width, input_height))
         ref_img_list.append(teeth_ref_img)
         ref_img_list.append(teeth_ref_img)
 

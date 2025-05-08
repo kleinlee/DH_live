@@ -9,6 +9,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 input_width = 72
 input_height = 72
+model_size = 128
 
 class DownBlock(nn.Module):
     def __init__(self, in_features, out_features, kernel_size=3, padding=1, groups=1, use_relu=True):
@@ -315,9 +316,10 @@ class DINet_mini_pipeline(nn.Module):
         super(DINet_mini_pipeline, self).__init__()
         self.infer_model = DINet_mini(source_channel,ref_channel, cuda = cuda)
 
-        self.grid_tensor = F.affine_grid(torch.eye(2, 3).unsqueeze(0).float(), (1, 1, 128, 128), align_corners=False).to("cuda" if cuda else "cpu")
+        self.grid_tensor = F.affine_grid(torch.eye(2, 3).unsqueeze(0).float(), (1, 1, model_size, model_size), align_corners=False).to("cuda" if cuda else "cpu")
 
         face_fusion_tensor = cv2.imread(os.path.join(current_dir, "../../mini_live/face_fusion_mask.png"))
+        face_fusion_tensor = cv2.resize(face_fusion_tensor, (model_size, model_size))
         face_fusion_tensor = torch.from_numpy(face_fusion_tensor[:,:,:1] / 255.).float().permute(2, 0, 1).unsqueeze(0)
         mouth_fusion_tensor = cv2.imread(os.path.join(current_dir, "../../mini_live/mouth_fusion_mask.png"))
         mouth_fusion_tensor = cv2.resize(mouth_fusion_tensor, (input_width, input_height))
@@ -348,23 +350,10 @@ class DINet_mini_pipeline(nn.Module):
 
         # # print(warped_img0.size(), face_mask.size())
         warped_tensor = warped_img0[:, :3]*(1-face_mask)
-        # # warped_tensor = F.interpolate(warped_tensor, (128, 128))
-        # w_pad = int((128 - 72) / 2)
-        # h_pad = int((128 - 56) / 2)
-        # gl_mouth_tensor = gl_tensor * face_mask
-        # gl_mouth_tensor = gl_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
-        # fake_mouth_tensor = warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
-        # # fake_out = self.infer_model.interface(fake_mouth_tensor)
-        # fake_mouth_tensor_input = fake_mouth_tensor*(1-self.mouth_fusion_tensor) + gl_mouth_tensor
-        # fake_out = self.infer_model.interface(fake_mouth_tensor_input)
-        # # fake_out = fake_mouth_tensor
-        # fake_out = fake_out * self.mouth_fusion_tensor + fake_mouth_tensor*(1-self.mouth_fusion_tensor)
-        # warped_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad] = fake_out
-        # return warped_tensor
 
         # warped_tensor = warped_img0
-        w_pad = int((128 - input_width) / 2)
-        h_pad = int((128 - input_height) / 2)
+        w_pad = int((model_size - input_width) / 2)
+        h_pad = int((model_size - input_height) / 2)
         gl_mouth_tensor = gl_tensor * face_mask
         gl_mouth_tensor = gl_mouth_tensor[:, :3, h_pad:-h_pad, w_pad:-w_pad]
 
@@ -384,12 +373,12 @@ class DINet_mini_pipeline(nn.Module):
         '''
 
         Args:
-            source_tensor: [batch, 3, 128, 128]
-            gl_tensor: [batch, 3, 128, 128]
-            ref_tensor: [batch, 12, 128, 128]
+            source_tensor: [batch, 3, model_size, model_size]
+            gl_tensor: [batch, 3, model_size, model_size]
+            ref_tensor: [batch, 12, model_size, model_size]
 
         Returns:
-            warped_tensor: [batch, 3, 128, 128]
+            warped_tensor: [batch, 3, model_size, model_size]
         '''
         self.ref_input(ref_tensor)
         warped_tensor = self.interface(source_tensor, gl_tensor)
@@ -399,20 +388,7 @@ class DINet_mini_pipeline(nn.Module):
 if __name__ == "__main__":
     device = "cpu"
     import torch.nn.functional as F
-    # size = (56, 72)  # h, w
-    # model = DINet_mini(3, 4*3, cuda = device=="cuda")
-    # model.eval()
-    # model = model.to(device)
-    # driving_img = torch.zeros([1, 3, size[0], size[1]]).to(device)
-    # ref_img = torch.zeros([1, 4*3, size[0], size[1]]).to(device)
-    # from thop import profile
-    # from thop import clever_format
-    #
-    # flops, params = profile(model.to(device), inputs=(ref_img, driving_img))
-    # flops, params = clever_format([flops, params], "%.3f")
-    # print(flops, params)
-
-    size = (128, 128)  # h, w
+    size = (model_size, model_size)  # h, w
     model = DINet_mini_pipeline(3, 4*3, cuda = device=="cuda")
     model.eval()
     model = model.to(device)

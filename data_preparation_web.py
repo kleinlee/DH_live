@@ -11,7 +11,7 @@ from talkingface.utils import crop_mouth, main_keypoints_index, smooth_array,nor
 import json
 from mini_live.obj.wrap_utils import index_wrap, index_edge_wrap
 import pickle
-
+from talkingface.models.DINet_mini import model_size
 
 def step0_keypoints(video_path, out_path):
     Path_output_pkl = video_path + "/processed.pkl"
@@ -55,7 +55,7 @@ def step1_crop_mouth(pts_3d, vid_width, vid_height):
     # import pandas as pd
     # pd.DataFrame(list_source_crop_rect).to_csv("sss.csv")
 
-    standard_size = 128
+    standard_size = model_size
     list_standard_v = []
     for frame_index in range(len(list_source_crop_rect)):
         source_pts = pts_3d[frame_index]
@@ -106,7 +106,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     vid_width_ref = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     vid_height_ref = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    standard_size = 128
+    standard_size = model_size
     frame_index = 0
     # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ret, frame = cap.read()

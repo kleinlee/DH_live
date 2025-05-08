@@ -11,6 +11,9 @@ from talkingface.data.few_shot_dataset import get_image
 from mini_live.render import create_render_model
 from talkingface.models.DINet_mini import input_height,input_width
 from talkingface.model_utils import device
+
+from talkingface.models.DINet_mini import model_size
+
 def interface_mini(path, wav_path, output_video_path):
     # 加载音频模型
     Audio2FeatureModel = LoadAudioModel(r'checkpoint/lstm/lstm_model_epoch_325.pkl')
@@ -21,7 +24,7 @@ def interface_mini(path, wav_path, output_video_path):
     renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
 
     # 设置标准尺寸和裁剪比例
-    standard_size = 256
+    standard_size = model_size * 2
     crop_rotio = [0.5, 0.5, 0.5, 0.5]
     out_w = int(standard_size * (crop_rotio[0] + crop_rotio[1]))
     out_h = int(standard_size * (crop_rotio[2] + crop_rotio[3]))
@@ -117,13 +120,13 @@ def interface_mini(path, wav_path, output_video_path):
         bs[:6] = bs_array[frame_index, :6]
         bs[1] = bs[1] / 2 * 1.6
 
-        verts_frame_buffer = np.array(list_standard_v)[frame_index, :, :2].copy() / 256. * 2 - 1
+        verts_frame_buffer = np.array(list_standard_v)[frame_index, :, :2].copy() / model_size - 1
 
         rgba = renderModel_gl.render2cv(verts_frame_buffer, out_size=out_size, mat_world=mat_list[frame_index],
                                         bs_array=bs)
         rgba = rgba[::2, ::2, :]
         gl_tensor = torch.from_numpy(rgba / 255.).float().permute(2, 0, 1).unsqueeze(0)
-        source_tensor = cv2.resize(list_standard_img[frame_index], (128, 128))
+        source_tensor = cv2.resize(list_standard_img[frame_index], (model_size, model_size))
         source_tensor = torch.from_numpy(source_tensor / 255.).float().permute(2, 0, 1).unsqueeze(0)
 
         warped_img = renderModel_mini.interface(source_tensor.to(device), gl_tensor.to(device))
