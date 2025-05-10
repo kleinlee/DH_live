@@ -20,6 +20,12 @@ let isVoiceMode = true;
 let mediaRecorder;
 let audioChunks = [];
 
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.isSecureContext) {
+    alert('本项目使用了 WebCodecs API，该 API 仅在安全上下文（HTTPS 或 localhost）中可用。因此，在部署或测试时，请确保您的网页在 HTTPS 环境下运行，或者使用 localhost 进行本地测试。');
+  }
+});
+
 // 初始设置为语音模式
 function setVoiceMode() {
     isVoiceMode = true;

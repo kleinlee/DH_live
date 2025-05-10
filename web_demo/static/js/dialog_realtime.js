@@ -32,6 +32,12 @@ const textInput = document.getElementById('text-input');
 const voiceInputArea = document.getElementById('voice-input-area');
 const voiceInputText = voiceInputArea.querySelector('span'); // 获取显示文字的 span 元素
 
+document.addEventListener('DOMContentLoaded', function() {
+  if (!window.isSecureContext) {
+    alert('本项目使用了 WebCodecs API，该 API 仅在安全上下文（HTTPS 或 localhost）中可用。因此，在部署或测试时，请确保您的网页在 HTTPS 环境下运行，或者使用 localhost 进行本地测试。');
+  }
+});
+
 // 初始设置为语音模式
 function setVoiceMode() {
     isVoiceMode = true;
@@ -82,6 +88,10 @@ async function running_audio_recorder() {
             let current_time = Date.now();
             if (speech_score > 0.5)
             {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                {
+                    await asr_realtime_ws();
+                }
                 if (!isRecording)
                 {
                     isRecording = true;
@@ -134,8 +144,7 @@ async function asr_realtime_ws() {
     try {
         ws = new WebSocket(websocket_url);
         ws.onopen = () => {
-            console.log('connected')
-            ws.send('{"sid": 0}')
+            console.log('WebSocket connected')
         }
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
@@ -156,6 +165,13 @@ async function asr_realtime_ws() {
                 }
             }
         }
+        ws.onclose = (event) => {
+            console.log('WebSocket closed');
+            // 可选：重新连接逻辑
+        };
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
 
         console.log('ws connected');
         // stateButton.disabled = true;
