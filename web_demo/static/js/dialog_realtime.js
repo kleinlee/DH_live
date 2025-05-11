@@ -73,7 +73,7 @@ async function running_audio_recorder() {
             if (last_3_voice_samples.length > 3) {
                 last_3_voice_samples = last_3_voice_samples.slice(-3);
             }
-            console.log('recording and send audio', pcmData.length);
+            console.log('recording and send audio', pcmData.length, ws.readyState);
 
             // PCM数据处理,只取前 512 个 int16 数据
             const uint8Data = new Uint8Array(pcmData.buffer, 0, 512 * 2);
@@ -88,7 +88,7 @@ async function running_audio_recorder() {
             let current_time = Date.now();
             if (speech_score > 0.5)
             {
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                if (!ws || ws.readyState !== WebSocket.OPEN)
                 {
                     await asr_realtime_ws();
                 }
@@ -243,14 +243,61 @@ function addMessage(message, isUser, isNew, replace=false) {
 // 初始设置为语音模式
 setVoiceMode();
 
-// 发送文字消息
-function sendTextMessage(inputValue) {
-    sendButton.innerHTML = '<i class="material-icons">stop</i>';
+function initAudioContext() {
     if (!audioContext || audioContext.state === 'closed') {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     } else if (audioContext.state === 'suspended') {
-        audioContext.resume(); // 如果处于暂停状态，则恢复
+        audioContext.resume();
     }
+}
+
+async function handleResponseStream(responseBody, isNewSession) {
+    const reader = responseBody.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+                return;
+            }
+            const chunk = decoder.decode(value, { stream: true });
+            sse_data_buffer += chunk; // 将新数据追加到缓存区
+
+            // 根据换行符拆分缓存区中的数据
+            const chunks = sse_data_buffer.split("\n");
+            // 处理完整的 JSON 块
+            for (let i = 0; i < chunks.length - 1; i++) {
+                try {
+                    const data = JSON.parse(chunks[i]);
+                    console.log("Received text:", data.text, sse_startpoint);
+                    console.log("Received audio (Base64):", data.audio.length);
+                    addMessage(data.text, false, sse_startpoint);
+                    sse_startpoint = false;
+                    // 将 Base64 音频数据转换为 Uint8Array
+                    if (data.audio)
+                    {
+                        const audioUint8Array = base64ToUint8Array(data.audio);
+                        audioQueue.push(audioUint8Array); // 将 Uint8Array 推入队列
+                    }
+                    sse_endpoint = data.endpoint;
+                    playAudio();
+                } catch (error) {
+                    console.error("Error parsing chunk:", error);
+                }
+            }
+            // 将最后一个不完整的块保留在缓存区中
+            sse_data_buffer = chunks[chunks.length - 1];
+        }
+    } catch (error) {
+        console.error('流处理异常:', error);
+    }
+}
+
+// 发送文字消息
+async function sendTextMessage(inputValue) {
+    sendButton.innerHTML = '<i class="material-icons">stop</i>';
+    initAudioContext();
     if (inputValue) {
         sse_controller = new AbortController();
         sse_startpoint = true;
@@ -267,62 +314,29 @@ function sendTextMessage(inputValue) {
                 characterName = ""; // 默认值
             }
         }
-        fetch(server_url, {
-            method: 'post',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({"input_mode": "text", 'prompt': inputValue, 'voice_id': characterName, 'voice_speed': "" }),
-            signal: sse_controller.signal
-        })
-            .then(response => response.body)
-            .then(body => {
-                const reader = body.getReader();
-                const decoder = new TextDecoder();
-                function read() {
-                    return reader.read().then(({ done, value }) => {
-                        if (done) {
-                            return;
-                        }
-                        const chunk = decoder.decode(value, { stream: true });
-                        sse_data_buffer += chunk; // 将新数据追加到缓存区
-
-                        // 根据换行符拆分缓存区中的数据
-                        const chunks = sse_data_buffer.split("\n");
-                        // 处理完整的 JSON 块
-                        for (let i = 0; i < chunks.length - 1; i++) {
-                            try {
-                                const data = JSON.parse(chunks[i]);
-                                console.log("Received text:", data.text, sse_startpoint);
-                                console.log("Received audio (Base64):", data.audio.length);
-                                addMessage(data.text, false, sse_startpoint);
-                                sse_startpoint = false;
-                                // 将 Base64 音频数据转换为 Uint8Array
-                                if (data.audio)
-                                {
-                                    const audioUint8Array = base64ToUint8Array(data.audio);
-                                    audioQueue.push(audioUint8Array); // 将 Uint8Array 推入队列
-                                }
-                                sse_endpoint = data.endpoint;
-                                playAudio();
-                            } catch (error) {
-                                console.error("Error parsing chunk:", error);
-                            }
-                        }
-
-                        // 将最后一个不完整的块保留在缓存区中
-                        sse_data_buffer = chunks[chunks.length - 1];
-
-                        return read();
-                    });
-                }
-                return read();
-            })
-            .catch(error => {
-                if (error.name === 'AbortError') {
-                    console.log('Fetch aborted');
-                } else {
-                    console.error('Fetch error:', error);
-                }
+        let requestBody = {"input_mode": "text", 'prompt': inputValue, 'voice_id': characterName, 'voice_speed': "" }
+        try {
+            const response = await fetch(server_url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+                signal: sse_controller.signal
             });
+
+            if (!response.ok) throw new Error(`HTTP错误 ${response.status}`);
+            await handleResponseStream(response.body, true);
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('请求中止');
+            } else {
+                console.error('请求错误:', error);
+            }
+            asr_realtime_ws();
+        }
+    }
+    else
+    {
+        start_new_round();
     }
 }
 
