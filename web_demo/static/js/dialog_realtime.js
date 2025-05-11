@@ -142,10 +142,22 @@ async function start_new_round() {
 
 async function asr_realtime_ws() {
     try {
-        ws = new WebSocket(websocket_url);
-        ws.onopen = () => {
-            console.log('WebSocket connected')
+        if (ws && ws.readyState !== WebSocket.CLOSED) {
+            ws.close();
         }
+        ws = new WebSocket(websocket_url);
+        // Create a promise that resolves when the connection is open
+        const connectionPromise = new Promise((resolve, reject) => {
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                resolve();
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                reject(error);
+            };
+        });
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             console.log('Received data:', data);
@@ -167,18 +179,16 @@ async function asr_realtime_ws() {
         }
         ws.onclose = (event) => {
             console.log('WebSocket closed');
-            // 可选：重新连接逻辑
-        };
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
+            ws = null;
         };
 
-        console.log('ws connected');
-        // stateButton.disabled = true;
+        await connectionPromise;
+        console.log('ws connected and ready');
 
     } catch (error) {
         console.error('Error:', error);
-        // stateButton.disabled = false; // 异常时恢复按钮状态
+        ws = null; // Ensure ws is set to null on error
+        throw error;
     }
 }
 
@@ -331,7 +341,7 @@ async function sendTextMessage(inputValue) {
             } else {
                 console.error('请求错误:', error);
             }
-            asr_realtime_ws();
+            start_new_round();
         }
     }
     else
