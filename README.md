@@ -86,6 +86,14 @@ python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
 python web_demo/server.py
 ```
 可以打开 localhost:8888/static/MiniLive.html。
+### Authorize
+网页部分的商业应用涉及形象授权（去除logo）：访问www.matesx.com/authorized.html
+
+上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
+### Chat Now
+访问 matesx.com， 即刻在任意设备开启定制形象、克隆语音、打造人设的数字人对话之旅。
+
+小程序请搜索“MatesX数字生命”
 ## Algorithm Architecture
 ![deepseek_mermaid_20250506_c244f8](https://github.com/user-attachments/assets/548f65aa-3ede-4657-bf4e-56b3c93272bb)
 
