@@ -46,7 +46,7 @@
 # 切换到DH_live根目录下
 python web_demo/server_realtime.py
 ```
-打开浏览器，访问 http://localhost:8888/MiniLive_RealTime.html
+打开浏览器，访问 http://localhost:8888/static/MiniLive_RealTime.html
 
 
 如果只是需要简单演示服务：
@@ -54,7 +54,7 @@ python web_demo/server_realtime.py
 # 切换到DH_live根目录下
 python web_demo/server.py
 ```
-打开浏览器，访问 http://localhost:8888/MiniLive.html
+打开浏览器，访问 http://localhost:8888/static/MiniLive.html
 
 ## 配置说明
 
