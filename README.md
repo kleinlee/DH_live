@@ -6,6 +6,8 @@ Notes：目前项目主要维护DH_live_mini, 目前最快的2D视频数字人�
 
 DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
 
+商业化网页应用：[matesx.com](matesx.com), 你可以直接打开网页查看完整体应用。
+
 ![微信图片_20250209153828](https://github.com/user-attachments/assets/32650fac-3885-4c98-886f-66258ef891a7)
 
 
@@ -38,7 +40,7 @@ All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAf
 ### 平台支持
 - **windows**: 支持视频数据处理、离线视频合成、网页服务器。
 - **linux&macOS**：支持视频数据处理、搭建网页服务器，不支持离线视频合成。
-- **网页&小程序**：支持客户端直接打开。
+- **网页&小程序**：支持客户端直接打开（可搜索小程序“MatesX数字生命”，功能和网页版完全一致）。
 - **App**：webview方式调用网页或重构原生应用。
 
 
@@ -86,8 +88,10 @@ python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
 python web_demo/server.py
 ```
 可以打开 localhost:8888/static/MiniLive.html。
+
+如果想体验最佳的流式对话效果，请认真阅读 [web_demo/README.md](https://github.com/kleinlee/DH_live/blob/main/web_demo/README.md),内含完整的可商用工程。
 ### Authorize
-网页部分的商业应用涉及形象授权（去除logo）：访问www.matesx.com/authorized.html
+网页部分的商业应用涉及形象授权（去除logo）：访问[授权说明](www.matesx.com/authorized.html)
 
 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
 ### Chat Now

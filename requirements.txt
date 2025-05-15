@@ -6,3 +6,4 @@ pyglm
 glfw
 PyOpenGL
 gradio
+sherpa-onnx
