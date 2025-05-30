@@ -91,7 +91,7 @@ python web_demo/server.py
 
 如果想体验最佳的流式对话效果，请认真阅读 [web_demo/README.md](https://github.com/kleinlee/DH_live/blob/main/web_demo/README.md),内含完整的可商用工程。
 ### Authorize
-网页部分的商业应用涉及形象授权（去除logo）：访问[授权说明](www.matesx.com/authorized.html)
+网页部分的商业应用涉及形象授权（去除logo）：访问[授权说明] (www.matesx.com/authorized.html)
 
 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
 ### Chat Now
