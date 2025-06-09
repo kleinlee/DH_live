@@ -107,4 +107,5 @@ DH_live is licensed under the MIT License.
 ## 联系
 |  加我好友，请备注“进群”，拉你进去微信交流群。| 进入QQ群聊，分享看法和最新资讯。                                                                        |
 |-------------------|------------------------------------------------------------------------------------------|
-| ![微信交流群](https://github.com/user-attachments/assets/b1f24ebb-153b-44b1-b522-14f765154110) | ![QQ群聊](https://github.com/user-attachments/assets/29bfef3f-438a-4b9f-ba09-e1926d1669cb) |
+| ![微信交流群](https://github.com/user-attachments/assets/b1f24ebb-153b-44b1-b522-14f765154110) | ![QQ群聊](https://github.com/user-attachments/assets/23b1c431-2bf6-4198-8d32-d4b79a09c298) |
+
