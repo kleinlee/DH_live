@@ -2,7 +2,8 @@
 # 实时数字人 全网最快
 Notes：目前项目主要维护DH_live_mini, 目前最快的2D视频数字人方案，没有之一，项目含有网页推理的案例，不依赖任何GPU，可在任何手机设备实时运行。
 
-原版DH_live已不再获支持，希望慎重考虑使用。原版使用方法参见另一分支 [here](https://github.com/kleinlee/DH_live/blob/main_250508/README_DH_live.md)。
+我们已开源超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)。是DH_live进化版本。记忆 · 表情 · 动作 · 多端 · 轻量, 适配 Windows/macOS/iOS/Android/小程序
+![cf30e14d623cc79854c184db22c67df1](https://github.com/user-attachments/assets/a2a0e859-aac9-4e1b-9884-2dc7365d74a0)
 
 DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
 
