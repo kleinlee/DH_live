@@ -18,6 +18,7 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 - 2025-03-11 增加DH_live_mini的CPU支持。
 - 2025-04-09 增加对IOS17以上的长视频支持。
 - 2025-04-25 增加完整的实时对话服务，包含vad-asr-llm-tts-数字人全流程，请见web_demo/server_realtime.py。
+- 2025-09-23 超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)已开源。是DH_live进化版本。记忆 · 表情 · 动作 · 多端 · 轻量, 适配 Windows/macOS/iOS/Android/小程序
 
 # 数字人方案对比
 
