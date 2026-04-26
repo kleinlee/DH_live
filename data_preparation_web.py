@@ -73,11 +73,11 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     face_pts_mean = render_verts[:478, :3].copy()
 
     wrapModel_verts, wrapModel_face = generateWrapModel()
-    mat_list, _, face_pts_mean_personal_primer, transform_from_template_to_personal = calc_face_mat(np.array(list_standard_v), face_pts_mean)
+    mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
 
     # face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.33 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.66
     face_pts_mean_personal_primer = normalizeLips(face_pts_mean_personal_primer, face_pts_mean)
-    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer, transform_from_template_to_personal)
+    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
 
     face3D_data = []
     for i in face_wrap_entity:

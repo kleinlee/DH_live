@@ -16,7 +16,7 @@ index_wrap = index_wrap + [10]
 index_edge_wrap = [110,60,79,108,61,58,73,67,78,66,69,168,177,169,173,160,163,205,178,162,207]
 index_edge_wrap_upper = [111, 110, 51, 52, 53, 54, 48, 63, 56, 47, 46, 1, 148, 149, 158, 165, 150, 156, 155, 154, 153, 207, 208]
 
-def newWrapModel(wrapModel, face_pts_mean_personal_primer, transform_from_template_to_personal):
+def newWrapModel(wrapModel, face_pts_mean_personal_primer):
     face_wrap_entity = wrapModel.copy()
     # 正规点
     face_wrap_entity[:len(index_wrap),:3] = face_pts_mean_personal_primer[index_wrap, :3]
@@ -25,9 +25,4 @@ def newWrapModel(wrapModel, face_pts_mean_personal_primer, transform_from_templa
     for index_, jj in enumerate(index_edge_wrap):
         face_wrap_entity[len(index_wrap) + index_,:3] = face_wrap_entity[jj, :3] + (face_wrap_entity[jj, :3] - vert_mid) * 0.32
         face_wrap_entity[len(index_wrap) + index_, 2] = face_wrap_entity[jj, 2]
-
-    transformed = (transform_from_template_to_personal[:3, :3] @ face_wrap_entity[-36:, :3].T + transform_from_template_to_personal[:3, 3:4]).T
-    print(face_wrap_entity.shape, transform_from_template_to_personal)
-    exit(1)
-    face_wrap_entity[-36:, :3] = transformed
     return face_wrap_entity
