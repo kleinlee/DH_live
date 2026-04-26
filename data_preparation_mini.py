@@ -192,8 +192,13 @@ def extract_from_video(
             except FaceMeshDetectionError as e:
                 raise VideoProcessingError(f"第{frame_index}帧面部网格检测失败") from e
             pts_3d[frame_index] = frame_kps + [x0, y0, 0]
-
-
+            if frame_index > 0:
+                # 2. 计算相邻帧之间 XY 坐标的移动距离，超出一定范围就认定不合理
+                frame_diff = pts_3d[frame_index] - pts_3d[frame_index - 1]
+                xy_displacement = np.sqrt(frame_diff[:, 0] ** 2 + frame_diff[:, 1] ** 2)
+                xy_displacement = xy_displacement.mean()
+                if xy_displacement > crop_size/8:
+                    raise VideoProcessingError(f"第{frame_index}帧面部范围大幅度改变，请检查")
 
             # point_size = 1
             # point_color = (0, 0, 255)  # BGR

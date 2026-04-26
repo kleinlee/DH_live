@@ -29,7 +29,7 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 - 2025-04-25 增加完整的实时对话服务，包含vad-asr-llm-tts-数字人全流程，请见web_demo/server_realtime.py。
 - 2025-09-23 超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)已开源。是DH_live进化版本。记忆 · 表情 · 动作 · 多端 · 轻量, 适配 Windows/macOS/iOS/Android/小程序
 
-# 数字人方案对比
+## 数字人方案对比
 
 | 方案名称 | 单帧算力（Mflops） | 使用方式 | 脸部分辨率 | 适用设备 |
 |------------------------------|-------------------|------------|------------|------------------------------------|
@@ -38,9 +38,6 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 | DH_live | 55046 | 无须训练 | 256 | 30系以上显卡 |
 | duix.ai | 1200 | 单人训练 | 160 | 中高端手机APP |
 
-### 模型文件
-所有模型文件已移至 [百度网盘](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
-[GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
 
 ### 主要特性
 - **最低算力**: 推理一帧的算力39 Mflops，有多小？小于手机端大部分的人脸检测算法。
@@ -59,6 +56,11 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 | 离线视频合成 | ✅ | ❌ |
 | 构建网页服务器 | ✅ | ✅ |
 | 实时对话 | ✅ | ✅ |
+
+## 模型文件
+所有模型文件已移至 [百度网盘](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
+[GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
+
 
 ## 简易使用 (Gradio)
 第一次使用或想获取完整流程请运行此Gradio。
@@ -99,11 +101,11 @@ python web_demo/server.py
 可以打开 localhost:8888/static/MiniLive.html。
 
 如果想体验最佳的流式对话效果，请认真阅读 [web_demo/README.md](https://github.com/kleinlee/DH_live/blob/main/web_demo/README.md),内含完整的可商用工程。
-### 授权
+## 授权
 网页部分的商业应用涉及形象授权（去除logo）：访问[授权说明] (www.matesx.com/authorized.html)
 
 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
-### 在线应用
+## 在线应用
 访问[matesx网页程序](https://www.matesx.com)， 或小程序请搜索"MatesX数字生命"
 
 ## 算法构架图

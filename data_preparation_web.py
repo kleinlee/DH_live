@@ -19,7 +19,7 @@ def step0_keypoints(video_path, out_path):
         pts_3d = pickle.load(f)
 
     pts_3d = pts_3d.reshape(len(pts_3d), -1)
-    smooth_array_ = smooth_array(pts_3d, weight=[0.02, 0.09, 0.78, 0.09, 0.02])
+    smooth_array_ = smooth_array(pts_3d, weight=[0.01, 0.08, 0.82, 0.08, 0.01])
     pts_3d = smooth_array_.reshape(len(pts_3d), 478, 3)
 
     video_path = os.path.join(video_path, "processed.mp4")
@@ -45,22 +45,17 @@ def step1_crop_mouth(pts_3d, vid_width, vid_height):
     face_mid = (list_source_crop_rect[:,2:] + list_source_crop_rect[:,0:2])/2.
     # step 1: Smooth Cropping Rectangle Transition
     # Since HTML video playback can have inconsistent frame rates and may not align precisely from frame to frame, adjust the cropping rectangle to transition smoothly, compensating for potential misalignment.
-    face_mid = smooth_array(face_mid, weight=[0.10, 0.20, 0.40, 0.20, 0.10])
     face_mid = face_mid.astype(int)
     if face_mid[:, 0].max() + face_size / 2 > vid_width or face_mid[:, 1].max() + face_size / 2 > vid_height:
         raise ValueError("人脸范围超出了视频，请保证视频合格后再重试")
 
     list_source_crop_rect = np.concatenate([face_mid - face_size // 2, face_mid + face_size // 2], axis = 1)
 
-    # import pandas as pd
-    # pd.DataFrame(list_source_crop_rect).to_csv("sss.csv")
-
     standard_size = model_size
     list_standard_v = []
     for frame_index in range(len(list_source_crop_rect)):
         source_pts = pts_3d[frame_index]
         source_crop_rect = list_source_crop_rect[frame_index]
-        print(source_crop_rect)
         standard_v = get_image(source_pts, source_crop_rect, input_type="mediapipe", resize=standard_size)
 
         list_standard_v.append(standard_v)
@@ -78,11 +73,11 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     face_pts_mean = render_verts[:478, :3].copy()
 
     wrapModel_verts, wrapModel_face = generateWrapModel()
-    mat_list, _, face_pts_mean_personal_primer = calc_face_mat(np.array(list_standard_v), face_pts_mean)
+    mat_list, _, face_pts_mean_personal_primer, transform_from_template_to_personal = calc_face_mat(np.array(list_standard_v), face_pts_mean)
 
     # face_pts_mean_personal_primer[INDEX_MP_LIPS] = face_pts_mean[INDEX_MP_LIPS] * 0.33 + face_pts_mean_personal_primer[INDEX_MP_LIPS] * 0.66
     face_pts_mean_personal_primer = normalizeLips(face_pts_mean_personal_primer, face_pts_mean)
-    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer)
+    face_wrap_entity = newWrapModel(wrapModel_verts, face_pts_mean_personal_primer, transform_from_template_to_personal)
 
     face3D_data = []
     for i in face_wrap_entity:
@@ -90,6 +85,14 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     for i in range(len(wrapModel_face) // 3):
         face3D_data.append("f {0} {1} {2}\n".format(wrapModel_face[3 * i] + 1, wrapModel_face[3 * i + 1] + 1,
                                                    wrapModel_face[3 * i + 2] + 1))
+
+    with open(os.path.join(out_path, "face3D.obj"), "w") as f:
+        # for i in face_wrap_entity[:209+32*8]:
+        for i in face_wrap_entity:
+            f.write("v {:.3f} {:.3f} {:.3f}\n".format(i[0], i[1], i[2]))
+        for i in range(len(wrapModel_face) // 3):
+            f.write("f {0} {1} {2}\n".format(wrapModel_face[3 * i] + 1, wrapModel_face[3 * i + 1] + 1,
+                                             wrapModel_face[3 * i + 2] + 1))
 
     # Step 3: Generate ref_data.txt data
     renderModel_mini = RenderModel_Mini()
@@ -140,7 +143,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
         source_crop_rect = list_source_crop_rect[frame_index]
         standard_v = list_standard_v[frame_index]
 
-        standard_v = standard_v[index_wrap, :2].flatten().tolist()
+        standard_v = standard_v[index_wrap[:-1], :2].flatten().tolist()
         mat = mat_list[frame_index].T.flatten().tolist()
         standard_v_rounded = [round(i, 5) for i in mat] + [round(i, 1) for i in standard_v]
         combined_data["json_data"].append({"rect": source_crop_rect.tolist(), "points": standard_v_rounded})

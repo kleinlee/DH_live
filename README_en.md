@@ -1,5 +1,3 @@
-
-
 <div align="center">
 <img src="preview/web.jpg" width="240" />
 
@@ -20,7 +18,7 @@ We have open-sourced the ultra-lightweight multi-platform digital human dialogue
 </div>
 DHLive_mini direct inference demo on mobile browser [bilibili video](https://www.bilibili.com/video/BV1UgFFeKEpp)
 
-# News
+## News
 - 2025-01-26 Minimized and simplified the web resource package, with gzip resources smaller than 2MB. Simplified video data, halving the data size.
 - 2025-02-09 Added ASR entry and one-click avatar switching.
 - 2025-02-27 Optimized rendering, removed reference video; now only one video segment is needed for generation.
@@ -29,7 +27,7 @@ DHLive_mini direct inference demo on mobile browser [bilibili video](https://www
 - 2025-04-25 Added a complete real-time dialogue service, including the full process of vad-asr-llm-tts-digital human. See web_demo/server_realtime.py.
 - 2025-09-23 The ultra-lightweight multi-platform digital human dialogue engine [MatesX](https://github.com/kleinlee/MatesX) has been open-sourced. It is the evolution of DH_live. Memory · Expression · Action · Multi-platform · Lightweight, compatible with Windows/macOS/iOS/Android/Mini-program
 
-# Comparison of Digital Human Solutions
+## Comparison of Digital Human Solutions
 
 | Solution Name | Single Frame Compute (Mflops) | Usage Method | Face Resolution | Applicable Devices |
 |------------------------------|-------------------|------------|------------|------------------------------------|
@@ -38,9 +36,6 @@ DHLive_mini direct inference demo on mobile browser [bilibili video](https://www
 | DH_live | 55046 | No Training Required | 256 | GPUs 30-series and above |
 | duix.ai | 1200 | Individual Training | 160 | Mid-to-high-end mobile APPs |
 
-### Checkpoint
-All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
-[GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
 
 ### Key Features
 - **Lowest Compute**: The compute power for inferring one frame is 39 Mflops. How small is that? Smaller than most face detection algorithms on mobile.
@@ -60,7 +55,12 @@ All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAf
 | Build Web Server | ✅ | ✅ |
 | Real-time Dialogue | ✅ | ✅ |
 
+## Checkpoint
+All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
+[GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
+
 ## Easy Usage (Gradio)
+
 For first-time use or to get the full process, please run this Gradio.
 ```bash
 python app.py

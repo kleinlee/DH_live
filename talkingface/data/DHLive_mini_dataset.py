@@ -1,3 +1,4 @@
+import os.path
 import numpy as np
 import cv2
 import tqdm
@@ -7,8 +8,7 @@ import glob
 import pickle
 import torch
 import torch.utils.data as data
-from talkingface.models.DINet_mini import input_height,input_width
-model_size = (256, 256)
+from talkingface.models.DINet_mini import input_height,input_width,model_size
 
 def get_image(A_path, crop_coords, input_type, resize= (256, 256)):
     (x_min, y_min, x_max, y_max) = crop_coords
@@ -24,8 +24,8 @@ def get_image(A_path, crop_coords, input_type, resize= (256, 256)):
 def generate_input(img, keypoints, is_train = False, mode=["mouth_bias"]):
     # 根据关键点决定正方形裁剪区域
     crop_coords = crop_mouth(keypoints, img.shape[1], img.shape[0], is_train=is_train)
-    target_keypoints = get_image(keypoints[:,:2], crop_coords, input_type='mediapipe', resize = model_size)
-    target_img = get_image(img, crop_coords, input_type='img', resize = model_size)
+    target_keypoints = get_image(keypoints[:,:2], crop_coords, input_type='mediapipe', resize = (model_size, model_size))
+    target_img = get_image(img, crop_coords, input_type='img', resize = (model_size, model_size))
 
     source_img = copy.deepcopy(target_img)
     source_keypoints = target_keypoints
@@ -35,19 +35,18 @@ def generate_input(img, keypoints, is_train = False, mode=["mouth_bias"]):
 
 def generate_ref(img, keypoints, is_train=False, teeth = False):
     crop_coords = crop_mouth(keypoints, img.shape[1], img.shape[0], is_train=is_train)
-    ref_keypoints = get_image(keypoints, crop_coords, input_type='mediapipe', resize = model_size)
-    ref_img = get_image(img, crop_coords, input_type='img', resize = model_size)
+    ref_keypoints = get_image(keypoints, crop_coords, input_type='mediapipe', resize = (model_size, model_size))
+    ref_img = get_image(img, crop_coords, input_type='img', resize = (model_size, model_size))
 
     if teeth:
-        teeth_mask = np.zeros((model_size[1], model_size[0], 3), np.uint8)  # edge map for all edges
+        teeth_mask = np.zeros((model_size, model_size, 3), np.uint8)  # edge map for all edges
         pts = ref_keypoints[INDEX_LIPS_INNER, :2]
         pts = pts.reshape((-1, 1, 2)).astype(np.int32)
         cv2.fillPoly(teeth_mask, [pts], color=(1, 1, 1))
         # cv2.imshow("s", teeth_mask*255)
         # cv2.waitKey(-1)
         ref_img = ref_img * teeth_mask
-
-    ref_face_edge = draw_mouth_maps(ref_keypoints, size = model_size)
+    ref_face_edge = draw_mouth_maps(ref_keypoints, size = (model_size, model_size))
     ref_img = np.concatenate([ref_img, ref_face_edge[:,:,:1]], axis=2)
     return ref_img
 
@@ -88,8 +87,6 @@ class Few_Shot_Dataset(data.Dataset):
 
         assert len(self.driven_images) == len(self.driven_keypoints)
         assert len(self.driven_images) == len(self.driving_keypoints)
-
-        self.out_size = (256, 256)
 
         self.sample_num = np.sum([len(i) for i in self.driven_images])
 
@@ -173,19 +170,19 @@ class Few_Shot_Dataset(data.Dataset):
         # cv2.imshow("s", ref_face_edge)
         # cv2.waitKey(-1)
         # print(ref_face_edge.shape, crop_coords)
-        teeth_img = get_image(ref_face_edge, crop_coords, input_type='img', resize = model_size)
+        teeth_img = get_image(ref_face_edge, crop_coords, input_type='img', resize = (model_size, model_size))
 
 
         source_img[:,:,1][np.where(source_img[:,:,0] == 0)] = teeth_img[:,:,1][np.where(source_img[:,:,0] == 0)]
         source_img[:, :, 2][np.where(source_img[:, :, 0] == 0)] = teeth_img[:, :, 2][np.where(source_img[:, :, 0] == 0)]
 
-        target_img = cv2.resize(target_img, (128, 128))
-        source_img = cv2.resize(source_img, (128, 128))
-        self.ref_img = cv2.resize(self.ref_img, (128, 128))
+        target_img = cv2.resize(target_img, (model_size, model_size))
+        source_img = cv2.resize(source_img, (model_size, model_size))
+        self.ref_img = cv2.resize(self.ref_img, (model_size, model_size))
 
 
-        w_pad = int((128 - input_width) / 2)
-        h_pad = int((128 - input_height) / 2)
+        w_pad = int((model_size - input_width) / 2)
+        h_pad = int((model_size - input_height) / 2)
 
         target_img = target_img[h_pad:-h_pad, w_pad:-w_pad]/255.
         source_img = source_img[h_pad:-h_pad, w_pad:-w_pad]/255.
@@ -211,7 +208,11 @@ def data_preparation(train_video_list):
     for i in tqdm.tqdm(train_video_list):
         # for i in ["xiaochangzhang/00004"]:
         model_name = i
-        img_filelist = glob.glob("{}/image/*.png".format(model_name))
+        if os.path.exists("{}/image".format(model_name)):
+            img_filelist = glob.glob("{}/image/*.png".format(model_name))
+        else:
+            img_filelist = glob.glob("{}/image2/*.png".format(model_name))
+
         img_filelist.sort()
         if len(img_filelist) == 0:
             continue

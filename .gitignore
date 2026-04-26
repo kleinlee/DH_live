@@ -13,7 +13,14 @@ video_data/teeth_ref/*_2.png
 !video_data/test/
 !video_data/audio1.wav
 
+video_data2/*
+
 /web_demo/static/ios_test.html
 
 /websocket_demo/
 web_demo/models/
+
+/output/
+data_preparation.py
+inference_mini.py
+tmp.py

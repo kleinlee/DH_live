@@ -24,10 +24,11 @@ vec4 calculateMorphPosition(vec3 position, vec2 textureCoord) {
         morphSum += bsVec[6] * texelFetch(texture_bs, coord6, 0).xyz;
         tmp_Position2.xyz += morphSum;
     }
-    else if (textureCoord.x == 4.0)
-    {
+    else if (textureCoord.x == 4.0) {
         // lower teeth
-        vec3 morphSum = vec3(0.0, (bsVec[0] + bsVec[1])/ 2.7 + 6, 0.0);
+        float z_ = (bsVec[0] + bsVec[1])/ 3.9;
+        z_ = max(z_, 0.0);
+        vec3 morphSum = vec3(0.0, (bsVec[0] + bsVec[1])/ 3 + 4, z_);
         tmp_Position2.xyz += morphSum;
     }
     return tmp_Position2;
@@ -38,30 +39,20 @@ void main() {
 
     vec4 tmp_Position2 = calculateMorphPosition(a_position, a_texture);
     vec4 tmp_Position = gWorld * tmp_Position2;
-    // vec4 tmp_Position = gWorld * vec4(a_position, 1.0);
-    // vec3 tmp_Position = a_position;
-//     vec4 pos_ = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
-    // # upper lips 1 lower lips2 teeth3 edge4
 
     v_bias = vec2(0.0, 0.0);
-    if (a_texture.x == -1.0f)
-    {
+    if (a_texture.x == -1.0f) {
         v_bias = vec2(0.0, 0.0);
     }
-    else if (a_texture.y < 209.0f)
-    {
+    else if (a_texture.y < 209.0f) {
         vec4 vert_new = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
         v_bias = vert_new.xy - vertBuffer[int(a_texture.y)].xy;
     }
-
-    if (a_texture.x >= 3.0f)
-    {
-        gl_Position = gProjection * vec4(tmp_Position.x, tmp_Position.y, 500.0, 1.0);
-    }
-    else
-    {
+    if (a_texture.x >= 3.0f) {
         gl_Position = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
     }
-
+    else {
+        gl_Position = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
+    }
     v_texture = a_texture;
 }
