@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="VcsDirectoryMappings">
-    <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/DH_live" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/utils/DH_live" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/websocket_demo/webai-realtime-voice-chat" vcs="Git" />
-  </component>
-</project>
