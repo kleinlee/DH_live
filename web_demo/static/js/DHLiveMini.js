@@ -1207,9 +1207,24 @@ var createQtAppInstance = ( () => {
                 }
             })
         }
+        var nowIsMonotonic = true;
+        function __emscripten_get_now_is_monotonic() {
+            return nowIsMonotonic
+        }
         function _abort() {
             abort("")
         }
+        function _emscripten_date_now() {
+            return Date.now()
+        }
+        var _emscripten_get_now;
+        if (ENVIRONMENT_IS_NODE) {
+            _emscripten_get_now = () => {
+                var t = process["hrtime"]();
+                return t[0] * 1e3 + t[1] / 1e6
+            }
+        } else
+            _emscripten_get_now = () => performance.now();
         function _emscripten_memcpy_big(dest, src, num) {
             HEAPU8.copyWithin(dest, src, src + num)
         }
@@ -4290,7 +4305,10 @@ var createQtAppInstance = ( () => {
             "_embind_register_std_string": __embind_register_std_string,
             "_embind_register_std_wstring": __embind_register_std_wstring,
             "_embind_register_void": __embind_register_void,
+            "_emscripten_get_now_is_monotonic": __emscripten_get_now_is_monotonic,
             "abort": _abort,
+            "emscripten_date_now": _emscripten_date_now,
+            "emscripten_get_now": _emscripten_get_now,
             "emscripten_memcpy_big": _emscripten_memcpy_big,
             "emscripten_resize_heap": _emscripten_resize_heap,
             "environ_get": _environ_get,
@@ -4313,6 +4331,10 @@ var createQtAppInstance = ( () => {
         ;
         var _processJson = Module["_processJson"] = function() {
             return (_processJson = Module["_processJson"] = Module["asm"]["processJson"]).apply(null, arguments)
+        }
+        ;
+        var _processSecret = Module["_processSecret"] = function() {
+            return (_processSecret = Module["_processSecret"] = Module["asm"]["processSecret"]).apply(null, arguments)
         }
         ;
         var _setAudioBuffer = Module["_setAudioBuffer"] = function() {

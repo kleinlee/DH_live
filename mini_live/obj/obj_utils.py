@@ -83,9 +83,9 @@ def generateRenderInfo(floor = 5):
     v_face, vt_face, vn_face, face_face = readObjFile(os.path.join(current_dir,"../obj/obj_mediapipe/face3D.obj"))
     v_teeth, vt_teeth, vn_teeth, face_teeth = readObjFile(os.path.join(current_dir,"../obj/obj_mediapipe/modified_teeth_upper.obj"))
     v_teeth2, vt_teeth2, vn_teeth2, face_teeth2 = readObjFile(os.path.join(current_dir,"../obj/obj_mediapipe/modified_teeth_lower.obj"))
-    print(len(v_face), len(vt_face), len(vn_face), len(face_face))
-    print(len(v_teeth)//3, len(vt_teeth), len(vn_teeth), len(face_teeth))
-    print(len(v_face)//3 + len(v_teeth)//3 + len(v_teeth2)//3)
+    # print(len(v_face), len(vt_face), len(vn_face), len(face_face))
+    # print(len(v_teeth)//3, len(vt_teeth), len(vn_teeth), len(face_teeth))
+    # print(len(v_face)//3 + len(v_teeth)//3 + len(v_teeth2)//3)
 
     v_, vt, vn, face = (
         v_face + v_teeth + v_teeth2, vt_face + vt_teeth + vt_teeth2, vn_face + vn_teeth + vn_teeth2,

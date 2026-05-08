@@ -2,6 +2,7 @@
 .idea/
 /checkpoint/
 /mini_live/pt/
+/mini_live/build/
 /web_demo_authorized/
 /utils/
 # 忽略 video_data 文件夹下的所有内容
@@ -20,7 +21,22 @@ video_data2/*
 /websocket_demo/
 web_demo/models/
 
+build
 /output/
 data_preparation.py
 inference_mini.py
 tmp.py
+
+web_demo/MOSS-TTS-Nano/models
+web_demo/MOSS-TTS-Nano/generated_audio
+
+web_demo/voiceapi/llm2.py
+web_demo/voiceapi/tts2.py
+web_demo/README2.md
+web_demo/tts_ws_server.py
+web_demo/MOSS-TTS-Nano
+web_demo/static/tts_ws
+web_demo/static/cosyvoice2
+
+talkingface/models/DINet_mini_logo.py
+mini_live/MatesX_logo.png

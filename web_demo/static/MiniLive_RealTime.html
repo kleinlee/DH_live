@@ -23,6 +23,16 @@
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             }
 
+            #background_video {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                z-index: 0;
+            }
+
             #canvas_video {
                 position: absolute;
                 top: 0;
@@ -145,16 +155,18 @@
         </div>
 
         <figure style="overflow:visible;" id="loadingSpinner">
-            <strong>MiniMates: loading...</strong>
+            <strong>MatesX: loading...</strong>
         </figure>
         <canvas id="canvasEl"></canvas>
+
+        <video id="background_video" src="background/bg.mp4" autoplay loop muted playsinline></video>
+
         <canvas id="canvas_video"></canvas>
         <canvas id="canvas_gl" width="128" height="128"></canvas>
         <div id="screen"></div>
         <iframe id="screen2" src="dialog_RealTime.html" frameborder="0" style="display: none;"></iframe>
         <div id="startMessage">加载中</div>
         <script src="js/pako.min.js"></script>
-        <script src="js/mp4box.all.min.js"></script>
         <script src="js/DHLiveMini.js"></script>
         <script src="js/MiniMateLoader.js"></script>
         <script src="js/MiniLive2.js"></script>

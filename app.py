@@ -19,11 +19,11 @@ css = """
 
 video_dir_path = ""
 # 假设你已经有了这两个函数
-def data_preparation(video1, resize_option):
+def data_preparation(video1, resize_option, matting_option):
     global video_dir_path
     # 处理视频的逻辑
     video_dir_path = "video_data/{}".format(uuid.uuid4())
-    data_preparation_mini(video1, video_dir_path, resize_option)
+    data_preparation_mini(video1, video_dir_path, matting=matting_option, resize_option=resize_option)
     data_preparation_web(video_dir_path)
 
     return "视频处理完成，保存至目录{}".format(video_dir_path)
@@ -75,7 +75,9 @@ def create_interface():
             with gr.Column():
                 video1 = gr.Video(label="上传静默视频", elem_id="video-output", sources="upload")
         # 增加可选项
-        resize_option = gr.Checkbox(label="是否转为最高720P（适配手机）", value=True)
+        with gr.Row():
+            resize_option = gr.Checkbox(label="是否转为最高720P（适配手机）", value=True)
+            matting_option = gr.Checkbox(label="是否抠图（绿幕扣除）", value=False)
         process_button = gr.Button("处理视频")
         process_output = gr.Textbox(label="处理结果")
 
@@ -164,13 +166,12 @@ def create_interface():
         gr.Markdown("""
                 - 可访问www.matesx.com 体验完整服务。
                 - 商业授权（去除logo）：访问www.matesx.com/authorized.html, 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
-                - 人物切换：已开放功能，可自己整改，官方后续会完善。
-                - 未来12个月会持续更新效果，可以关注公众号”Mates数字生命“获取即时动态。
+                - 官方素材库（含100+形象）。
                 """)
 
 
         # 绑定按钮点击事件
-        process_button.click(data_preparation, inputs=[video1, resize_option], outputs=process_output)
+        process_button.click(data_preparation, inputs=[video1, resize_option, matting_option], outputs=process_output)
         generate_button.click(demo_mini, inputs=audio, outputs=video_output)
         launch_button.click(launch_server, outputs=launch_output)
 

@@ -26,6 +26,7 @@ DHLive_mini direct inference demo on mobile browser [bilibili video](https://www
 - 2025-04-09 Added support for long videos on iOS 17 and above.
 - 2025-04-25 Added a complete real-time dialogue service, including the full process of vad-asr-llm-tts-digital human. See web_demo/server_realtime.py.
 - 2025-09-23 The ultra-lightweight multi-platform digital human dialogue engine [MatesX](https://github.com/kleinlee/MatesX) has been open-sourced. It is the evolution of DH_live. Memory · Expression · Action · Multi-platform · Lightweight, compatible with Windows/macOS/iOS/Android/Mini-program
+- 2026-05-07 Improved memory consumption, added matting and foreground/background separation.
 
 ## Comparison of Digital Human Solutions
 
@@ -59,6 +60,16 @@ DHLive_mini direct inference demo on mobile browser [bilibili video](https://www
 All checkpoint files are moved to [BaiduDrive](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 [GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
 
+model dir：
+ ```
+ checkpoint/
+ ├── DINet_mini/
+ │   └── epoch_40.pth                     # 视频生成模型
+ ├── lstm/
+ │   └── lstm_model_epoch_325.pkl         # 语音特征模型
+ ├── rvm_resnet50.pth                     # 绿幕扣除模型
+  ```
+    
 ## Easy Usage (Gradio)
 
 For first-time use or to get the full process, please run this Gradio.
@@ -98,8 +109,16 @@ python web_demo/server.py
 ```
 You can open localhost:8888/static/MiniLive.html.
 
+To adjust web page configuration, edit the `CONFIG` object at the top of `web_demo/static/js/MiniLive2.js`:
+- `videoSrc` / `dataSrc` — Video file and combined_data file paths
+- `chromaKeyEnabled` — Whether to enable chroma key (green screen removal)
+- `backgroundVideoSrc` — Background video path when chroma key is enabled
+- `showFPS` — Whether to display FPS
+
 If you want to experience the best streaming dialogue effect, please read [web_demo/README.md](https://github.com/kleinlee/DH_live/blob/main/web_demo/README.md) carefully, which contains a complete commercial-ready project.
-### Authorize
+## Avatars
+Public avatar library: https://matesx.com/assets.html
+
 Commercial application of the web part involves avatar authorization (removing the logo): visit [Authorization Instructions] (www.matesx.com/authorized.html)
 
 Upload your generated combined_data.json.gz. After authorization, download the new combined_data.json.gz and overwrite the original file to remove the logo.
@@ -108,7 +127,7 @@ Visit the [matesx web application](https://www.matesx.com), or search for "Mates
 
 ## Algorithm Architecture Diagram
 <div align="center">
-<img src="preview/AlgorithmArchitecture.png" width="480" />
+<img src="preview/AlgorithmArchitecture.jpg" width="480" />
 </div>
 
 ## License

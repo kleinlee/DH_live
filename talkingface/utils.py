@@ -351,7 +351,7 @@ def normalizeLips(face_pts, face_pts_mean):
     for i in range(9):
         for j in range(4):
             index0 = INDEX_MP_LIPS[j*20:j*20 + 20][i + 1]
-            index1 = INDEX_MP_LIPS[j*20:j*20 + 20][-i]
-            face_pts[index0, 1] -= bias_mouth[i] / 2
-            face_pts[index1, 1] += bias_mouth[i] / 2
+            index1 = INDEX_MP_LIPS[j*20:j*20 + 20][-(i+1)]
+            face_pts[index0, 1] -= bias_mouth[i] * 0.1
+            face_pts[index1, 1] += bias_mouth[i] * 0.7
     return face_pts

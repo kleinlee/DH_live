@@ -1,204 +1,287 @@
-// 判断是否为iOS系统
-const tag_ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-// 判断iOS版本是否是17以上
-let tag_ios17 = false;
-if (tag_ios) {
-    // 从用户代理中提取iOS版本号
-    const match = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-    if (match && match[1]) {
-        const iosVersion = parseInt(match[1], 10);
-        tag_ios17 = iosVersion >= 17;
+// ==================== 重要配置项 ====================
+let CONFIG = {
+    showFPS: false,              // 是否显示 FPS
+    chromaKeyEnabled: false,     // 是否开启绿幕扣除
+    backgroundVideoSrc: "background/bg.mp4",  // 背景视频路径（开启绿幕扣除时使用）
+    videoSrc: "assets/01.mp4",                // 默认视频文件路径
+    dataSrc: "assets/combined_data.json.gz"   // 默认数据文件路径
+};
+// ==================================================
 
-        if (!tag_ios17) {
-            alert("iOS系统目前不支持iOS17以下版本，请升级后再试");
-        }
-    } else {
-        // 无法获取版本号的情况
-        alert("无法检测您的iOS版本，请确保使用iOS17或更高版本");
-    }
-}
+let frameTimes = [];
+const VIDEO_FPS = 25;
+const FRAME_INTERVAL = 1000 / VIDEO_FPS;
+const MODULO_N = 16;
+const THRESHOLD = 128;
 
-let fps_enabled = true; // 全局参数，控制是否显示FPS
-let frameTimes = []; // 用于存储最近几帧的时间戳
-let ctxEl = canvasEl.getContext("2d");
+let chromaKeyCanvas = null;
+let chromaKeyGl = null;
+let chromaKeyProgram = null;
+let chromaKeyTextures = { foreground: null };
+
+let frameIndexCanvas = null;
+let frameIndexCtx = null;
+
 class VideoProcessor {
     constructor() {
-        this.mp4box = MP4Box.createFile();
-        this.videoTrack = null;
-        this.videoDecoder = null;
-        this.videoFrames = [];
-        this.nbSampleTotal = 0;
-        this.countSample = 0;
-        this.isReverseAdded = false;
-
-        // 绑定事件处理函数
-        this.mp4box.onReady = this.handleReady.bind(this);
-        this.mp4box.onSamples = this.handleSamples.bind(this);
-
+        this.video = null;
         this.combinedData = null;
-        this.offscreenCanvas = null;
-        this.offscreenCtx = null;
+        this.lastFrameTime = 0;
     }
 
     async init(videoUrl, gzipUrl) {
-        // 清空旧数据
-        this.videoFrames = [];
-        this.countSample = 0;
-        this.isReverseAdded = false;
-        this.combinedData = null;
-        // 重置 MP4Box
-        if (this.mp4box) {
-            this.mp4box.stop(); // 停止解析
-            this.mp4box.flush(); // 清空缓冲区
-            this.mp4box = null; // 销毁旧实例
+        if (this.video) {
+            this.video.pause();
+            this.video.src = '';
+            this.video = null;
         }
-        this.mp4box = MP4Box.createFile(); // 创建新实例
 
-        // 重新绑定事件处理函数
-        this.mp4box.onReady = this.handleReady.bind(this);
-        this.mp4box.onSamples = this.handleSamples.bind(this);
-        await this.fetchVideo(videoUrl);
+        this.video = document.createElement('video');
+        this.video.src = videoUrl;
+        this.video.loop = true;
+        this.video.muted = true;
+        this.video.playsInline = true;
+
+        await new Promise((resolve, reject) => {
+            this.video.onloadedmetadata = () => {
+                const videoW = this.video.videoWidth;
+                const videoH = this.video.videoHeight;
+                
+                canvas_video.width = videoW;
+                canvas_video.height = videoH;
+                canvasEl.width = videoW;
+                canvasEl.height = videoH;
+                
+                resolve();
+            };
+            this.video.onerror = reject;
+        });
+
         await this.fetchVideoUtilData(gzipUrl);
     }
 
-    async fetchVideo(url) {
-        const response = await fetch(url);
-        const buffer = await response.arrayBuffer();
-        buffer.fileStart = 0;
-        this.mp4box.appendBuffer(buffer);
-        this.mp4box.flush();
-    }
-
     async fetchVideoUtilData(gzipUrl) {
-        // 从服务器加载 Gzip 压缩的 JSON 文件
         const response = await fetch(gzipUrl);
         const compressedData = await response.arrayBuffer();
         const decompressedData = pako.inflate(new Uint8Array(compressedData), { to: 'string' });
         this.combinedData = JSON.parse(decompressedData);
     }
 
+    decodeModuloFromPixels(pixelData) {
+        let detected = 0;
 
-    handleReady(info) {
-        this.videoTrack = info.videoTracks[0];
-        if (!this.videoTrack) return;
+        for (let i = 0; i < 4; i++) {
+            let r = pixelData[i * 4];
+            let bitValue = (r > THRESHOLD) ? 1 : 0;
 
-        this.mp4box.setExtractionOptions(this.videoTrack.id, 'video', { nbSamples: 100 });
-        const { track_width: videoW, track_height: videoH } = this.videoTrack;
-
-        // 假设canvas_video已在外部定义
-        canvas_video.width = videoW;
-        canvas_video.height = videoH;
-
-        canvasEl.width = videoW;
-        canvasEl.height = videoH;
-
-        this.offscreenCanvas = new OffscreenCanvas(videoW, videoH);
-        this.offscreenCtx = this.offscreenCanvas.getContext('2d', { alpha: false }); // 禁用 Alpha
-
-
-        this.videoDecoder = new VideoDecoder({
-            output: this.handleVideoFrame.bind(this),
-            error: (e) => console.error("VideoDecoder error:", e)
-        });
-
-        this.nbSampleTotal = this.videoTrack.nb_samples;
-        this.videoDecoder.configure({
-            codec: this.videoTrack.codec,
-            codedWidth: videoW,
-            codedHeight: videoH,
-            description: this.getExtradata()
-        });
-
-        this.mp4box.start();
-    }
-
-    handleVideoFrame(videoFrame) {
-        if (tag_ios17)
-        {
-            createImageBitmap(videoFrame).then(img => {
-                this.offscreenCtx.fillStyle = 'white';
-                this.offscreenCtx.fillRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
-                this.offscreenCtx.drawImage(img, 0, 0);
-                return this.offscreenCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
-            }).then(blob => {
-                const sizeInMB = (blob.size / (1024 * 1024)).toFixed(2); // 保留两位小数
-                console.log('Blob size:', `${sizeInMB} MB`);
-                this.videoFrames.push({
-                    blob,
-                    duration: videoFrame.duration,
-                    timestamp: videoFrame.timestamp
-                });
-
-                videoFrame.close();
-
-                // 添加逆序帧逻辑
-                if (this.videoFrames.length === this.nbSampleTotal && !this.isReverseAdded) {
-
-                    this.sortVideoFrames();
-                    this.videoFrames.push(...[...this.videoFrames].reverse());
-                    this.isReverseAdded = true;
-                    console.log(`Total frames: ${this.videoFrames.length}`);
-                }
-            });
-        }
-        else
-        {
-            createImageBitmap(videoFrame).then(img => {
-            this.videoFrames.push({
-                img,
-                duration: videoFrame.duration,
-                timestamp: videoFrame.timestamp
-            });
-            ctxEl.clearRect(0, 0, canvasEl.width, canvasEl.height);
-            ctxEl.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
-            videoFrame.close();
-
-            // 添加逆序帧逻辑
-            if (this.videoFrames.length === this.nbSampleTotal && !this.isReverseAdded) {
-
-                this.sortVideoFrames();
-                this.videoFrames.push(...[...this.videoFrames].reverse());
-                this.isReverseAdded = true;
-                console.log(`Total frames: ${this.videoFrames.length}`);
+            switch(i) {
+                case 0:
+                    if (bitValue) detected |= (1 << 1);
+                    break;
+                case 1:
+                    if (bitValue) detected |= (1 << 0);
+                    break;
+                case 2:
+                    if (bitValue) detected |= (1 << 3);
+                    break;
+                case 3:
+                    if (bitValue) detected |= (1 << 2);
+                    break;
             }
-        });
+        }
+
+        return detected;
+    }
+
+    getAccurateFrameIndex(pixelData) {
+        return this.decodeModuloFromPixels(pixelData);
+    }
+
+    findRealFrame(roughFrame, exactModulo) {
+        let candidateFrame = roughFrame;
+        if (candidateFrame % MODULO_N !== exactModulo) {
+            for (let offset = -7; offset <= 7; offset++) {
+                let candidate = candidateFrame + offset;
+                if (candidate >= 0 && candidate % MODULO_N === exactModulo) {
+                    return candidate;
+                }
+            }
+            console.warn("未找到匹配帧号，返回修正值:", candidateFrame);
+            return candidateFrame;
+        }
+        return candidateFrame;
+    }
+
+    getCurrentFrameIndex(pixelData) {
+        if (!this.video) return 0;
+        
+        const roughFrameByTime = Math.floor(this.video.currentTime * VIDEO_FPS);
+        const moduloFromPixel = this.getAccurateFrameIndex(pixelData);
+        // console.log("roughFrameByTime", roughFrameByTime, "moduloFromPixel", moduloFromPixel);
+        return this.findRealFrame(roughFrameByTime, moduloFromPixel);
+    }
+
+    play() {
+        if (this.video) {
+            this.video.play();
         }
     }
 
-    handleSamples(trackId, ref, samples) {
-        if (trackId !== this.videoTrack?.id) return;
-
-        this.countSample += samples.length;
-        for (const sample of samples) {
-            const chunk = new EncodedVideoChunk({
-                type: sample.is_sync ? "key" : "delta",
-                timestamp: sample.cts,
-                duration: sample.duration,
-                data: sample.data
-            });
-            this.videoDecoder.decode(chunk);
-        }
-
-        if (this.countSample >= this.nbSampleTotal) {
-            this.videoDecoder.flush();
+    pause() {
+        if (this.video) {
+            this.video.pause();
         }
     }
+}
 
-    getExtradata() {
-        const trak = this.mp4box.moov.traks[0];
-        const entry = trak.mdia.minf.stbl.stsd.entries[0];
-        const box = entry.avcC || entry.hvcC || entry.vpcC;
-        if (!box) return;
+function setupBackgroundVideo() {
+    const bgVideo = document.getElementById('background_video');
+    if (bgVideo) {
+        bgVideo.src = CONFIG.backgroundVideoSrc;
+        bgVideo.load();
+        bgVideo.style.display = 'block';
+        bgVideo.play().catch(e => console.log('背景视频自动播放被阻止:', e));
+    }
+}
 
-        const stream = new DataStream(undefined, 0, DataStream.BIG_ENDIAN);
-        box.write(stream);
-        return new Uint8Array(stream.buffer.slice(8));
+function hideBackgroundVideo() {
+    const bgVideo = document.getElementById('background_video');
+    if (bgVideo) {
+        bgVideo.pause();
+        bgVideo.style.display = 'none';
     }
-    sortVideoFrames() {
-        this.videoFrames.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function initChromaKeyGL() {
+    chromaKeyCanvas = document.createElement('canvas');
+    chromaKeyCanvas.width = canvas_video.width;
+    chromaKeyCanvas.height = canvas_video.height;
+    
+    console.log('初始化绿幕抠图 WebGL, 画布尺寸:', chromaKeyCanvas.width, 'x', chromaKeyCanvas.height);
+    
+    chromaKeyGl = chromaKeyCanvas.getContext('webgl2', { 
+        antialias: false, 
+        alpha: true,
+        premultipliedAlpha: false 
+    });
+    
+    const vertexShaderSource = `#version 300 es
+        in vec2 a_position;
+        in vec2 a_texCoord;
+        out vec2 v_texCoord;
+        
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+            v_texCoord = a_texCoord;
+        }
+    `;
+    
+    const fragmentShaderSource = `#version 300 es
+        precision highp float;
+        
+        in vec2 v_texCoord;
+        uniform sampler2D u_foreground;
+        uniform vec3 u_keyColor;
+        uniform float u_similarity;
+        uniform float u_smoothness;
+        uniform float u_spill;
+        out vec4 outColor;
+        
+        void main() {
+            vec4 fg = texture(u_foreground, v_texCoord);
+            
+            vec3 keyColor = u_keyColor;
+            
+            float diff = distance(fg.rgb, keyColor);
+            float mask = smoothstep(u_similarity, u_similarity + u_smoothness, diff);
+            
+            float spill = max(0.0, fg.g - max(fg.r, fg.b)) * u_spill;
+            vec3 color = fg.rgb - spill * keyColor;
+            
+            float edgeMask = smoothstep(u_similarity * 0.5, u_similarity, diff);
+            color = mix(color, fg.rgb, edgeMask * 0.5);
+            
+            outColor = vec4(color, mask);
+        }
+    `;
+    
+    const vertexShader = chromaKeyGl.createShader(chromaKeyGl.VERTEX_SHADER);
+    chromaKeyGl.shaderSource(vertexShader, vertexShaderSource);
+    chromaKeyGl.compileShader(vertexShader);
+    if (!chromaKeyGl.getShaderParameter(vertexShader, chromaKeyGl.COMPILE_STATUS)) {
+        console.error('顶点着色器编译失败:', chromaKeyGl.getShaderInfoLog(vertexShader));
     }
+    
+    const fragmentShader = chromaKeyGl.createShader(chromaKeyGl.FRAGMENT_SHADER);
+    chromaKeyGl.shaderSource(fragmentShader, fragmentShaderSource);
+    chromaKeyGl.compileShader(fragmentShader);
+    if (!chromaKeyGl.getShaderParameter(fragmentShader, chromaKeyGl.COMPILE_STATUS)) {
+        console.error('片段着色器编译失败:', chromaKeyGl.getShaderInfoLog(fragmentShader));
+    }
+    
+    chromaKeyProgram = chromaKeyGl.createProgram();
+    chromaKeyGl.attachShader(chromaKeyProgram, vertexShader);
+    chromaKeyGl.attachShader(chromaKeyProgram, fragmentShader);
+    chromaKeyGl.linkProgram(chromaKeyProgram);
+    if (!chromaKeyGl.getProgramParameter(chromaKeyProgram, chromaKeyGl.LINK_STATUS)) {
+        console.error('着色器程序链接失败:', chromaKeyGl.getProgramInfoLog(chromaKeyProgram));
+    } else {
+        console.log('绿幕抠图着色器初始化成功');
+    }
+    
+    const positions = new Float32Array([
+        -1, -1,  0, 1,
+         1, -1,  1, 1,
+        -1,  1,  0, 0,
+         1,  1,  1, 0,
+    ]);
+    
+    const buffer = chromaKeyGl.createBuffer();
+    chromaKeyGl.bindBuffer(chromaKeyGl.ARRAY_BUFFER, buffer);
+    chromaKeyGl.bufferData(chromaKeyGl.ARRAY_BUFFER, positions, chromaKeyGl.STATIC_DRAW);
+    
+    const posLoc = chromaKeyGl.getAttribLocation(chromaKeyProgram, 'a_position');
+    const texLoc = chromaKeyGl.getAttribLocation(chromaKeyProgram, 'a_texCoord');
+    
+    chromaKeyGl.enableVertexAttribArray(posLoc);
+    chromaKeyGl.vertexAttribPointer(posLoc, 2, chromaKeyGl.FLOAT, false, 16, 0);
+    chromaKeyGl.enableVertexAttribArray(texLoc);
+    chromaKeyGl.vertexAttribPointer(texLoc, 2, chromaKeyGl.FLOAT, false, 16, 8);
+    
+    chromaKeyTextures.foreground = chromaKeyGl.createTexture();
+    
+    chromaKeyGl.bindTexture(chromaKeyGl.TEXTURE_2D, chromaKeyTextures.foreground);
+    chromaKeyGl.texParameteri(chromaKeyGl.TEXTURE_2D, chromaKeyGl.TEXTURE_WRAP_S, chromaKeyGl.CLAMP_TO_EDGE);
+    chromaKeyGl.texParameteri(chromaKeyGl.TEXTURE_2D, chromaKeyGl.TEXTURE_WRAP_T, chromaKeyGl.CLAMP_TO_EDGE);
+    chromaKeyGl.texParameteri(chromaKeyGl.TEXTURE_2D, chromaKeyGl.TEXTURE_MIN_FILTER, chromaKeyGl.LINEAR);
+    chromaKeyGl.texParameteri(chromaKeyGl.TEXTURE_2D, chromaKeyGl.TEXTURE_MAG_FILTER, chromaKeyGl.LINEAR);
+}
+
+function processChromaKey(foregroundSource) {
+    if (!chromaKeyGl || !chromaKeyProgram) {
+        return foregroundSource;
+    }
+    
+    chromaKeyGl.viewport(0, 0, chromaKeyCanvas.width, chromaKeyCanvas.height);
+    chromaKeyGl.clearColor(0, 0, 0, 0);
+    chromaKeyGl.clear(chromaKeyGl.COLOR_BUFFER_BIT);
+    
+    chromaKeyGl.useProgram(chromaKeyProgram);
+    
+    chromaKeyGl.activeTexture(chromaKeyGl.TEXTURE0);
+    chromaKeyGl.bindTexture(chromaKeyGl.TEXTURE_2D, chromaKeyTextures.foreground);
+    chromaKeyGl.texImage2D(chromaKeyGl.TEXTURE_2D, 0, chromaKeyGl.RGBA, chromaKeyGl.RGBA, chromaKeyGl.UNSIGNED_BYTE, foregroundSource);
+    
+    chromaKeyGl.uniform1i(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_foreground'), 0);
+    chromaKeyGl.uniform3f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_keyColor'), 0.0, 1.0, 0.0);
+    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_similarity'), 0.4);
+    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_smoothness'), 0.1);
+    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_spill'), 0.5);
+    
+    chromaKeyGl.drawArrays(chromaKeyGl.TRIANGLE_STRIP, 0, 4);
+    
+    return chromaKeyCanvas;
 }
 
 let asset_dir = "assets";
@@ -216,9 +299,15 @@ if (characterDropdown) {
         await videoProcessor.init(asset_dir + "/01.mp4", asset_dir + "/combined_data.json.gz");
         await loadCombinedData();
         await setupVertsBuffers();
+        
+        if (chromaKeyCanvas) {
+            chromaKeyCanvas.width = canvas_video.width;
+            chromaKeyCanvas.height = canvas_video.height;
+        }
+        
         isPaused = false;
-        // 启动绘制循环
-        await processVideoFrames();
+        videoProcessor.play();
+        processVideoFrames();
     });
 } else {
     console.warn("characterDropdown 元素未找到，无法绑定事件监听器");
@@ -226,26 +315,33 @@ if (characterDropdown) {
 // 初始化处理器
 const videoProcessor = new VideoProcessor();
 
-let frameIndex = 0;
-const frameInterval = 40;
-let lastFrameTime = performance.now();
-
-// 原始webgl渲染
 const canvas_gl = document.getElementById('canvas_gl');
 const gl = canvas_gl.getContext('webgl2', { antialias: false });
 
 // 最终显示的画布
 const canvas_video = document.getElementById('canvas_video');
-const ctx_video = canvas_video.getContext('2d');
+// const ctx_video = canvas_video.getContext('2d');
+const ctx_video = canvas_video.getContext('2d', { 
+    alpha: true,
+    willReadFrequently: false 
+});
 
 // 缩放到128x128
 const resizedCanvas = document.createElement('canvas');
-const resizedCtx = resizedCanvas.getContext('2d', { willReadFrequently: true });
+// const resizedCtx = resizedCanvas.getContext('2d', { willReadFrequently: true });
+const resizedCtx = resizedCanvas.getContext('2d', { 
+    alpha: true,
+    willReadFrequently: true 
+});
 resizedCanvas.width = 128;
 resizedCanvas.height = 128;
 
 // 创建一个像素缓冲区来存储读取的像素数据
 const pixels_fbo = new Uint8Array(128 * 128 * 4);
+
+// 预创建离屏 canvas，用于锁定当前视频帧，避免处理过程中视频继续播放导致不同步
+const lockedFrameCanvas = document.createElement('canvas');
+const lockedFrameCtx = lockedFrameCanvas.getContext('2d', { willReadFrequently: true });
 
 let objData;
 let dataSets = [];
@@ -355,8 +451,9 @@ async function init_gl() {
                     tmp_Position2.xyz += morphSum;
                 }
                 else if (textureCoord.x == 4.0) {
-                    // lower teeth
-                    vec3 morphSum = vec3(0.0, (bsVec[0] + bsVec[1]) / 2.7 + 6.0, 0.0);
+                    float z_ = (bsVec[0] + bsVec[1])/ 3.9;
+                    z_ = max(z_, 0.0);
+                    vec3 morphSum = vec3(0.0, (bsVec[0] + bsVec[1]) / 3.0 + 6.0, z_);
                     tmp_Position2.xyz += morphSum;
                 }
                 return tmp_Position2;
@@ -376,14 +473,7 @@ async function init_gl() {
                     vec4 vert_new = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
                     v_bias = vert_new.xy - (vertBuffer[int(a_texture.y)].xy / 128.0 * 2.0 - 1.0);
                 }
-
-                if (a_texture.x >= 3.0f) {
-                    gl_Position = gProjection * vec4(tmp_Position.x, tmp_Position.y, 500.0, 1.0);
-                }
-                else {
-                    gl_Position = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
-                }
-
+                gl_Position = gProjection * vec4(tmp_Position.xyz, 1.0);
                 v_texture = a_texture;
             }
         `;
@@ -408,6 +498,9 @@ async function init_gl() {
                     out_color = vec4(0.0, 0.0, 1.0, 1.0);
                 }
                 else if (v_texture.x > 3.0f && v_texture.x < 4.0f) {
+                    out_color = vec4(0.0, 0.0, 0.0, 1.0);
+                }
+                else if (v_texture.x == -2.0f) {
                     out_color = vec4(0.0, 0.0, 0.0, 1.0);
                 }
                 else {
@@ -468,14 +561,21 @@ async function setupVertsBuffers() {
 }
 
 async function newVideoTask() {
-    await videoProcessor.init("assets/01.mp4", "assets/combined_data.json.gz");
-    // 加载 combined_data.json.gz
+    await videoProcessor.init(CONFIG.videoSrc, CONFIG.dataSrc);
     await loadCombinedData();
     await init_gl();
     await setupVertsBuffers();
     initMemory();
-    // 启动绘制循环
-    await processVideoFrames();
+    
+    if (CONFIG.chromaKeyEnabled) {
+        initChromaKeyGL();
+        setupBackgroundVideo();
+    } else {
+        hideBackgroundVideo();
+    }
+    
+    videoProcessor.play();
+    processVideoFrames();
     document.getElementById('startMessage').style.display = 'none';
 }
 
@@ -540,8 +640,8 @@ function render(mat_world, subPoints, bsArray) {
     gl.uniformMatrix4fv(projectionUniformLocation, false, orthoMatrix);
 
     gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // gl.enable(gl.BLEND);
+    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
     gl.frontFace(gl.CW);
@@ -562,58 +662,66 @@ function render(mat_world, subPoints, bsArray) {
 
 async function processVideoFrames() {
     if (isPaused) {
-        // 如果暂停，直接返回，不处理帧
         return;
     }
-    // 检查视频帧是否已经解码完成
-    if (videoProcessor.videoFrames.length === 0 || videoProcessor.videoFrames.length < videoProcessor.nbSampleTotal) {
-        console.log('Waiting for video frames to load...', videoProcessor.videoFrames.length, videoProcessor.nbSampleTotal);
-        setTimeout(processVideoFrames, 100); // 等待100毫秒后再次检查
-        return;
-    }
-    if (frameIndex >= videoProcessor.videoFrames.length) {
-        frameIndex = 0; // 重新开始
-    }
-
-    if (tag_ios17)
-    {
-        const { blob, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
-        const img = await createImageBitmap(blob);
-        ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
-        img.close(); // 及时释放内存
-    }
-    else
-    {
-        const { img, duration, timestamp } = videoProcessor.videoFrames[frameIndex];
-        ctx_video.drawImage(img, 0, 0, canvas_video.width, canvas_video.height);
-    }
-
-    // 计算并显示FPS
-    if (fps_enabled) {
-        const currentTime = performance.now();
-        const deltaTime = currentTime - lastFrameTime;
-        frameTimes.push(currentTime);
-
-        // 只保留最近1秒的帧时间
-        while (frameTimes.length > 0 && currentTime - frameTimes[0] > 1000) {
-            frameTimes.shift();
-        }
-
-        const fps = frameTimes.length;
-        ctx_video.fillStyle = 'white';
-        ctx_video.font = '16px Arial';
-        ctx_video.textAlign = 'right';
-        ctx_video.fillText(`FPS: ${fps}`, canvas_video.width - 10, 20);
-    }
-
-    processDataSet(frameIndex);
-    frameIndex++;
 
     const currentTime = performance.now();
-    const deltaTime = currentTime - lastFrameTime;
-    const delay = Math.max(0, frameInterval - deltaTime);
-    lastFrameTime = currentTime + delay;
-    setTimeout(processVideoFrames, delay);
+    const deltaTime = currentTime - videoProcessor.lastFrameTime;
+
+    if (deltaTime >= FRAME_INTERVAL) {
+        videoProcessor.lastFrameTime = currentTime - (deltaTime % FRAME_INTERVAL);
+
+        // 一次性将当前视频帧绘制到离屏 canvas，锁定当前帧，避免后续处理中视频继续播放导致不同步
+        if (lockedFrameCanvas.width !== canvas_video.width || 
+            lockedFrameCanvas.height !== canvas_video.height) {
+            lockedFrameCanvas.width = canvas_video.width;
+            lockedFrameCanvas.height = canvas_video.height;
+        }
+        lockedFrameCtx.drawImage(videoProcessor.video, 0, 0, canvas_video.width, canvas_video.height);
+
+        if (!frameIndexCanvas) {
+            frameIndexCanvas = document.createElement('canvas');
+            frameIndexCanvas.width = 2;
+            frameIndexCanvas.height = 2;
+            frameIndexCtx = frameIndexCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        
+        // 从锁定的帧 canvas 读取帧序号像素
+        frameIndexCtx.clearRect(0, 0, 2, 2);
+        frameIndexCtx.drawImage(lockedFrameCanvas, 
+            canvas_video.width - 2, 0, 2, 2,
+            0, 0, 2, 2);
+        const pixelData = frameIndexCtx.getImageData(0, 0, 2, 2);
+        const currentFrameIndex = videoProcessor.getCurrentFrameIndex(pixelData.data);
+
+        ctx_video.clearRect(0, 0, canvas_video.width, canvas_video.height);
+
+        if (CONFIG.chromaKeyEnabled && chromaKeyGl) {
+            const chromaKeyResult = processChromaKey(lockedFrameCanvas);
+            ctx_video.drawImage(chromaKeyResult, 0, 0, canvas_video.width, canvas_video.height);
+        } else {
+            ctx_video.drawImage(lockedFrameCanvas, 0, 0, canvas_video.width, canvas_video.height);
+        }
+        // console.log("currentFrameIndex", currentFrameIndex, videoProcessor.video.currentTime);
+
+        processDataSet(currentFrameIndex);
+
+        if (CONFIG.showFPS) {
+            frameTimes.push(currentTime);
+
+            while (frameTimes.length > 0 && currentTime - frameTimes[0] > 1000) {
+                frameTimes.shift();
+            }
+
+            const fps = frameTimes.length;
+            ctx_video.fillStyle = 'white';
+            ctx_video.font = '16px Arial';
+            ctx_video.textAlign = 'right';
+            ctx_video.fillText(`FPS: ${fps}`, canvas_video.width - 10, 20);
+        }
+    }
+
+    requestAnimationFrame(processVideoFrames);
 }
 
 async function initMemory() {
@@ -641,6 +749,7 @@ async function processDataSet(currentDataSetIndex) {
 
     render(matrix, subPoints, bsArray);
     // console.log("bsArray", bsArray);
+    resizedCtx.clearRect(0, 0, 128, 128);
     resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, 128, 128);
 
     const imageData = resizedCtx.getImageData(0, 0, 128, 128);

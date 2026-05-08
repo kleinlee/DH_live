@@ -27,7 +27,8 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 - 2025-03-11 增加DH_live_mini的CPU支持。
 - 2025-04-09 增加对IOS17以上的长视频支持。
 - 2025-04-25 增加完整的实时对话服务，包含vad-asr-llm-tts-数字人全流程，请见web_demo/server_realtime.py。
-- 2025-09-23 超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)已开源。是DH_live进化版本。记忆 · 表情 · 动作 · 多端 · 轻量, 适配 Windows/macOS/iOS/Android/小程序
+- 2025-09-23 超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)已开源。适配 Windows/macOS/iOS/Android/小程序
+- 2026-05-07 改进内存消耗，增加抠图和前后景分离。
 
 ## 数字人方案对比
 
@@ -61,6 +62,17 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 所有模型文件已移至 [百度网盘](https://pan.baidu.com/s/1jH3WrIAfwI3U5awtnt9KPQ?pwd=ynd7)
 [GoogleDrive](https://drive.google.com/drive/folders/1az5WEWOFmh0_yrF3I9DEyctMyjPolo8V?usp=sharing)
 
+下载后，模型文件目录为：
+ ```
+ checkpoint/
+ ├── DINet_mini/
+ │   └── epoch_40.pth                     # 视频生成模型
+ ├── lstm/
+ │   └── lstm_model_epoch_325.pkl         # 语音特征模型
+ ├── rvm_resnet50.pth                     # 绿幕扣除模型
+  ```
+ 
+
 
 ## 简易使用 (Gradio)
 第一次使用或想获取完整流程请运行此Gradio。
@@ -88,7 +100,7 @@ python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
 python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。
-### 使用音频文件运行 ( linux and MacOS not supported!!! )
+### 使用音频文件运行 ( 此步需windows下运行 )
 语音文件必须是单通道16K Hz的wav文件格式。
 ```bash
 python demo_mini.py video_data/000002/assets video_data/audio0.wav 1.mp4
@@ -100,17 +112,25 @@ python web_demo/server.py
 ```
 可以打开 localhost:8888/static/MiniLive.html。
 
+如需调整网页配置，可编辑 `web_demo/static/js/MiniLive2.js` 顶部的 `CONFIG` 对象：
+- `videoSrc` / `dataSrc` — 视频文件和 combined_data 数据文件路径
+- `chromaKeyEnabled` — 是否开启绿幕扣除
+- `backgroundVideoSrc` — 绿幕扣除时使用的背景视频路径
+- `showFPS` — 是否显示帧率
+
 如果想体验最佳的流式对话效果，请认真阅读 [web_demo/README.md](https://github.com/kleinlee/DH_live/blob/main/web_demo/README.md),内含完整的可商用工程。
-## 授权
+## 形象
+公开形象库： https://matesx.com/assets.html
+
 网页部分的商业应用涉及形象授权（去除logo）：访问[授权说明] (www.matesx.com/authorized.html)
 
 上传你生成的combined_data.json.gz, 授权后下载得到新的combined_data.json.gz，覆盖原文件即可去除logo。
 ## 在线应用
 访问[matesx网页程序](https://www.matesx.com)， 或小程序请搜索"MatesX数字生命"
 
-## 算法构架图
+## 算法构架
 <div align="center">
-<img src="preview/AlgorithmArchitecture.png" width="480" />
+<img src="preview/AlgorithmArchitecture.jpg" width="480" />
 </div>
 
 ## 许可证
