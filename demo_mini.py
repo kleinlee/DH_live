@@ -9,10 +9,8 @@ import torch
 from talkingface.model_utils import LoadAudioModel, Audio2bs
 from talkingface.data.few_shot_dataset import get_image
 from mini_live.render import create_render_model
-from talkingface.models.DINet_mini import input_height,input_width
+from talkingface.models.DINet_mini import model_size, input_height,input_width
 from talkingface.model_utils import device
-
-from talkingface.models.DINet_mini import model_size
 
 def interface_mini(path, wav_path, output_video_path):
     # 加载音频模型
@@ -21,15 +19,7 @@ def interface_mini(path, wav_path, output_video_path):
     # 加载渲染模型
     from talkingface.render_model_mini import RenderModel_Mini
     renderModel_mini = RenderModel_Mini()
-    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
-
-    # 设置标准尺寸和裁剪比例
-    standard_size = model_size * 2
-    crop_rotio = [0.5, 0.5, 0.5, 0.5]
-    out_w = int(standard_size * (crop_rotio[0] + crop_rotio[1]))
-    out_h = int(standard_size * (crop_rotio[2] + crop_rotio[3]))
-    out_size = (out_w, out_h)
-    renderModel_gl = create_render_model((out_w, out_h), floor=20)
+    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40_new.pth")
 
     # 读取 Gzip 压缩的 JSON 文件
     combined_data_path = os.path.join(path, "combined_data.json.gz")
@@ -39,7 +29,21 @@ def interface_mini(path, wav_path, output_video_path):
     # 从 combined_data 中提取数据
     face3D_obj = combined_data["face3D_obj"]
     json_data = combined_data["json_data"]
-    ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, 20, input_height//4, input_width//4])
+    ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, -1])
+
+    model_size = combined_data.get("size", 184)
+
+    # 设置标准尺寸和裁剪比例
+    standard_size = model_size * 2
+    crop_rotio = [0.5, 0.5, 0.5, 0.5]
+    out_w = int(standard_size * (crop_rotio[0] + crop_rotio[1]))
+    out_h = int(standard_size * (crop_rotio[2] + crop_rotio[3]))
+    out_size = (out_w, out_h)
+    renderModel_gl = create_render_model((out_w, out_h), floor=20)
+
+    # # 设置 ref_data 到渲染模型
+    renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data).float().to(device)
+    ref_data = np.array(combined_data["ref_data"], dtype=np.float32).reshape([1, -1])[:, :64]
 
     # 设置 ref_data 到渲染模型
     renderModel_mini.net.infer_model.ref_in_feature = torch.from_numpy(ref_data).float().to(device)
@@ -113,12 +117,30 @@ def interface_mini(path, wav_path, output_video_path):
     save_path = "{}.mp4".format(task_id)
     videoWriter = cv2.VideoWriter(save_path, fourcc, 25, (int(vid_width), int(vid_height)))
 
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    bs_texture = cv2.imread(os.path.join(current_dir, "mini_live/bs_texture_halfFace.png"))
+    bs_texture = cv2.cvtColor(bs_texture, cv2.COLOR_BGR2RGB)
+    blendshape = bs_texture[:6,:209].astype(float)/255. * 2.0 - 1.0
+    mean_face = face_wrap_entity[:209, :3]
+
+    # 所有帧的人脸范围是list_source_crop_rect
+
     # 渲染每一帧
+    last_valid_bs = np.zeros([12], dtype=np.float32)
     for index2_ in range(len(bs_array)):
         frame_index = index2_ % len(mat_list)
         bs = np.zeros([12], dtype=np.float32)
         bs[:6] = bs_array[frame_index, :6]
-        bs[1] = bs[1] / 2 * 1.6
+
+        frame_verts = (blendshape * bs[:6].reshape(6, 1, 1)).sum(axis = 0)
+        y_bias = frame_verts[4, 1] - frame_verts[5, 1]
+        print(index2_, y_bias)
+        if y_bias > 0:
+            bs = bs * 0.5 + last_valid_bs * 0.5
+        elif y_bias < -45:
+            bs = bs * 0.5 + last_valid_bs * 0.5
+        else:
+            last_valid_bs = bs.copy()
 
         verts_frame_buffer = np.array(list_standard_v)[frame_index, :, :2].copy() / model_size - 1
 
@@ -147,7 +169,8 @@ def interface_mini(path, wav_path, output_video_path):
 
     # 使用 ffmpeg 合并音频和视频
     os.system(
-        "ffmpeg -i {} -i {} -c:v libx264 -pix_fmt yuv420p -y {}".format(save_path, wav_path, output_video_path))
+        "ffmpeg -loglevel quiet -i {} -i {} -c:v libx264 -pix_fmt yuv420p -crf 18 -y {}".format(save_path, wav_path, output_video_path)
+    )
     os.remove(save_path)
 
     cv2.destroyAllWindows()

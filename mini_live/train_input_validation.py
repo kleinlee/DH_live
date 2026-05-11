@@ -28,8 +28,8 @@ dict_info = data_preparation(video_list)
 test_set = Few_Shot_Dataset(dict_info, is_train=True, n_ref = 3)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=0, batch_size=1, shuffle=False)
 
-def Tensor2img(tensor_, channel_index):
-    frame = tensor_[channel_index:channel_index + 3, :, :].detach().squeeze(0).cpu().float().numpy()
+def Tensor2img(tensor_, channel_index, channel_num = 3):
+    frame = tensor_[channel_index:channel_index + channel_num, :, :].detach().squeeze(0).cpu().float().numpy()
     frame = np.transpose(frame, (1, 2, 0)) * 255.0
     frame = frame.clip(0, 255)
     return frame.astype(np.uint8)
@@ -38,6 +38,14 @@ for iteration, batch in enumerate(testing_data_loader):
     # source_tensor, source_prompt_tensor, ref_tensor, ref_prompt_tensor, target_tensor = [iii.to(device) for iii in batch]
     source_tensor, ref_tensor, target_tensor = [iii.to(device) for iii in batch[:3]]
     print(source_tensor.size(), ref_tensor.size(), target_tensor.size(), batch[3][0])
+
+    # ref_img = [Tensor2img(ref_tensor[:, :4], 0, 4), Tensor2img(ref_tensor[:, 4:8], 0, 4), Tensor2img(ref_tensor[:, 8:12], 0, 4)]
+    # frame = np.concatenate(ref_img, axis=1)
+    # frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGRA)
+    # cv2.imwrite("train_rgb.png", frame[:,:,:3])
+    # cv2.imwrite("train_rgba.png", frame)
+    # cv2.imshow("ss", frame[:, :, ::-1])
+    # cv2.waitKey(-1)
 
     frame0 = Tensor2img(source_tensor[0], 0)
     frame1 = Tensor2img(ref_tensor[0], 0)

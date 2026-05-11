@@ -27,7 +27,7 @@ DHLive_mini direct inference demo on mobile browser [bilibili video](https://www
 - 2025-04-25 Added a complete real-time dialogue service, including the full process of vad-asr-llm-tts-digital human. See web_demo/server_realtime.py.
 - 2025-09-23 The ultra-lightweight multi-platform digital human dialogue engine [MatesX](https://github.com/kleinlee/MatesX) has been open-sourced. It is the evolution of DH_live. Memory · Expression · Action · Multi-platform · Lightweight, compatible with Windows/macOS/iOS/Android/Mini-program
 - 2026-05-07 Improved memory consumption, added matting and foreground/background separation.
-
+- 2026-05-12 Upgraded to mini2.0, with improved resolution, reduced resource usage, more stable performance, and better iOS support.
 ## Comparison of Digital Human Solutions
 
 | Solution Name | Single Frame Compute (Mflops) | Usage Method | Face Resolution | Applicable Devices |
@@ -64,7 +64,7 @@ model dir：
  ```
  checkpoint/
  ├── DINet_mini/
- │   └── epoch_40.pth                     # 视频生成模型
+ │   └── epoch_40_new.pth                     # 视频生成模型
  ├── lstm/
  │   └── lstm_model_epoch_325.pkl         # 语音特征模型
  ├── rvm_resnet50.pth                     # 绿幕扣除模型
@@ -93,7 +93,7 @@ Note: If you don't have a GPU, you can install the CPU version of pytorch: pip i
 Download and unzip checkpoint files.
 ### Prepare Your Video
 ```bash
-python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
+python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002 --matting
 python data_preparation_web.py video_data/000002
 ```
 The processed video information will be stored in the ./video_data directory.

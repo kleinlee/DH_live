@@ -1,11 +1,11 @@
 
 
 <div align="center">
-<img src="preview/web.jpg" width="240" />
+<img src="preview/web.jpg" height="240" />
 
 # DH_live (mini)
 
-> 网页 · 实时 · 移动端 · 全网最小
+> 网页 · 实时 · 移动端 · 全网最快
 
 [中文版](README.md) | [English](README_en.md)
 
@@ -29,19 +29,21 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
 - 2025-04-25 增加完整的实时对话服务，包含vad-asr-llm-tts-数字人全流程，请见web_demo/server_realtime.py。
 - 2025-09-23 超轻量级多端数字人对话引擎[MatesX](https://github.com/kleinlee/MatesX)已开源。适配 Windows/macOS/iOS/Android/小程序
 - 2026-05-07 改进内存消耗，增加抠图和前后景分离。
+- 2026-05-12 升级到mini2.0，提升分辨率、减小资源占用、效果更稳定、对IOS支持更好
 
 ## 数字人方案对比
 
-| 方案名称 | 单帧算力（Mflops） | 使用方式 | 脸部分辨率 | 适用设备 |
-|------------------------------|-------------------|------------|------------|------------------------------------|
-| Ultralight-Digital-Human（mobile） | 1100 | 单人训练 | 160 | 中高端手机APP |
-| DH_live_mini | 39 | 无须训练 | 128 | 所有设备，网页&APP&小程序 |
-| DH_live | 55046 | 无须训练 | 256 | 30系以上显卡 |
-| duix.ai | 1200 | 单人训练 | 160 | 中高端手机APP |
+| 方案名称                             | 单帧算力（Mflops） | 使用方式 | 脸部分辨率 | 适用设备 |
+|----------------------------------|--------------|------------|-------|------------------------------------|
+| Ultralight-Digital-Human（mobile） | 1100         | 单人训练 | 160   | 中高端手机APP |
+| duix.ai                          | 1200         | 单人训练 | 160   | 中高端手机APP |
+| DH_live_mini                     | 39           | 无须训练 | 128   | 网页&APP&小程序 |
+| DH_live_mini2.0                  | 52           | 无须训练 | 184   | 网页&APP&小程序 |
+
 
 
 ### 主要特性
-- **最低算力**: 推理一帧的算力39 Mflops，有多小？小于手机端大部分的人脸检测算法。
+- **最低算力**: 推理一帧的算力39 Mflops，小于手机端大部分的人脸检测算法。
 - **最小存储**：整个网页资源可以压缩到3MB！
 - **无须训练**: 开箱即用，无需复杂的训练过程。
 
@@ -66,7 +68,7 @@ DHLive_mini手机浏览器直接推理演示 [bilibili video](https://www.bilibi
  ```
  checkpoint/
  ├── DINet_mini/
- │   └── epoch_40.pth                     # 视频生成模型
+ │   └── epoch_40_new.pth                     # 视频生成模型
  ├── lstm/
  │   └── lstm_model_epoch_325.pkl         # 语音特征模型
  ├── rvm_resnet50.pth                     # 绿幕扣除模型
@@ -96,7 +98,7 @@ cd checkpoint
 下载并解压模型文件。
 ### 准备视频
 ```bash
-python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002
+python data_preparation_mini.py video_data/000002/video.mp4 video_data/000002 --matting
 python data_preparation_web.py video_data/000002
 ```
 处理后的视频信息将存储在 ./video_data 目录中。

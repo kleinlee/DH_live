@@ -73,7 +73,7 @@ def step0_keypoints(video_path, out_path):
         pts_3d = pickle.load(f)
 
     pts_3d = pts_3d.reshape(len(pts_3d), -1)
-    smooth_array_ = smooth_array(pts_3d, weight=[0.01, 0.08, 0.82, 0.08, 0.01])
+    smooth_array_ = smooth_array(pts_3d, weight=[0.015, 0.095, 0.78, 0.095, 0.015])
     pts_3d = smooth_array_.reshape(len(pts_3d), 478, 3)
 
     is_open_mouth = is_speaking(pts_3d[:, main_keypoints_index], INDEX_LIPS_OUTER)
@@ -146,7 +146,7 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
 
     # Step 3: Generate ref_data.txt data
     renderModel_mini = RenderModel_Mini()
-    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40.pth")
+    renderModel_mini.loadModel("checkpoint/DINet_mini/epoch_40_new.pth")
 
     Path_output_pkl = "{}/processed.pkl".format(video_path)
     with open(Path_output_pkl, "rb") as f:
@@ -178,7 +178,8 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
     renderModel_mini.reset_charactor(standard_img, standard_v[main_keypoints_index], standard_size=standard_size)
 
     ref_in_feature = renderModel_mini.net.infer_model.ref_in_feature
-    ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten()
+    print(renderModel_mini.net.ref_bg_feature)
+    ref_in_feature = ref_in_feature.detach().squeeze(0).cpu().float().numpy().flatten().tolist() + renderModel_mini.net.ref_bg_feature.flatten().tolist()
     # cv2.imwrite(os.path.join(out_path, 'ref.png'), renderModel_mini.ref_img_save)
     rounded_array = np.round(ref_in_feature, 6)
 
@@ -190,6 +191,8 @@ def generate_combined_data(list_source_crop_rect, list_standard_v, video_path, o
         "ref_data": rounded_array.tolist(),
         "json_data": [],
         "authorized": False,
+        "size": model_size,
+        "version": 1
     }
 
     for frame_index in range(len(list_source_crop_rect)):

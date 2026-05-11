@@ -28,14 +28,27 @@ class RenderModel_Mini:
     def reset_charactor(self, ref_img, ref_keypoints, standard_size = 256):
         ref_img_list = []
         ref_face_edge = draw_mouth_maps(ref_keypoints, size=(standard_size, standard_size))
-        # cv2.imshow("ss", ref_face_edge)
-        # cv2.waitKey(-1)
-        # cv2.imshow("ss", ref_img)
-        # cv2.waitKey(-1)
         ref_face_edge = cv2.resize(ref_face_edge, (model_size, model_size))
         ref_img = cv2.resize(ref_img, (model_size, model_size))
         w_pad = int((model_size - input_width) / 2)
         h_pad = int((model_size - input_height) / 2)
+
+        h, w = ref_img.shape[:2]
+        grid_h = h // 4
+        grid_w = w // 4
+
+        bg_feature = np.zeros(16, dtype=np.float32)
+        for i in range(4):
+            for j in range(4):
+                # 提取当前网格区域
+                grid_region = ref_img[i * grid_h: (i + 1) * grid_h, j * grid_w: (j + 1) * grid_w, :3]
+                luminance = (0.299 * grid_region[:, :, 2].astype(np.float32) +
+                             0.587 * grid_region[:, :, 1].astype(np.float32) +
+                             0.114 * grid_region[:, :, 0].astype(np.float32))
+
+                bg_feature[i * 4 + j] = np.clip(np.round(np.mean(luminance)), 0, 255)
+
+        self.net.ref_bg_feature = bg_feature/255.
 
         ref_img = np.concatenate(
             [ref_img[h_pad:-h_pad, w_pad:-w_pad, :3], ref_face_edge[h_pad:-h_pad, w_pad:-w_pad, :1]], axis=2)
@@ -43,13 +56,20 @@ class RenderModel_Mini:
         # cv2.waitKey(-1)
         ref_img_list.append(ref_img)
 
-        teeth_ref_img = os.path.join(current_dir, r"../video_data/teeth_ref/*.png")
+        teeth_ref_img = os.path.join(current_dir, r"../video_data/teeth_ref/*_0.png")
         teeth_ref_img = random.sample(glob.glob(teeth_ref_img), 1)[0]
         # teeth_ref_img = teeth_ref_img.replace("_2", "")
         teeth_ref_img = cv2.imread(teeth_ref_img, cv2.IMREAD_UNCHANGED)
         teeth_ref_img = cv2.resize(teeth_ref_img, (input_width, input_height))
+        teeth_ref_img = cv2.cvtColor(teeth_ref_img, cv2.COLOR_BGRA2RGBA)
         ref_img_list.append(teeth_ref_img)
         ref_img_list.append(teeth_ref_img)
+        # tmp = np.concatenate(ref_img_list, axis = 1)
+        # tmp = cv2.cvtColor(tmp, cv2.COLOR_RGBA2BGRA)
+        # cv2.imwrite("interface_rgb.png", tmp[:,:,:3])
+        # cv2.imwrite("interface_rgba.png", tmp)
+        # cv2.imshow("ss", tmp)
+        # cv2.waitKey(-1)
 
         self.ref_img_save = np.concatenate([i[:,:,:3] for i in ref_img_list], axis=1)
         self.ref_img = np.concatenate(ref_img_list, axis=2)

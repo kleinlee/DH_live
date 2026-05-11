@@ -109,7 +109,7 @@ def calc_face_mat(pts_array_origin, face_pts_mean):
     # mat_list必须要平滑，注意是针对每个视频分别平滑
     sub_mat_list = mat_list
     smooth_array_ = sub_mat_list.reshape(-1, 16)
-    smooth_array_ = smooth_array(smooth_array_, weight = [0.01, 0.08, 0.82, 0.08, 0.01])
+    smooth_array_ = smooth_array(smooth_array_, weight = [0.015, 0.095, 0.78, 0.095, 0.015])
 
     smooth_array_ = smooth_array_.reshape(-1, 4, 4)
     mat_list = smooth_array_

@@ -1,14 +1,20 @@
-
 // ==================== 重要配置项 ====================
 let CONFIG = {
     showFPS: false,              // 是否显示 FPS
-    chromaKeyEnabled: false,     // 是否开启绿幕扣除
+    chromaKeyEnabled: true,     // 是否开启绿幕扣除
     backgroundVideoSrc: "background/bg.mp4",  // 背景视频路径（开启绿幕扣除时使用）
     videoSrc: "assets/01.mp4",                // 默认视频文件路径
-    dataSrc: "assets/combined_data.json.gz"   // 默认数据文件路径
+    dataSrc: "assets/combined_data.json.gz",   // 默认数据文件路径
+    // 绿幕抠图参数配置
+    chromaKey: {
+        keyColor: { r: 0.0, g: 1.0, b: 0.0 },  // 要抠除的颜色（默认绿色）
+        similarity: 0.4,      // 相似度阈值：值越小，抠除范围越严格
+        smoothness: 0.1,      // 平滑度：值越大，边缘过渡越平滑
+        spill: 0.5           // 溢色抑制：减少绿色溢出到保留区域
+    }
 };
 // ==================================================
-
+const model_size = 184;
 let frameTimes = [];
 const VIDEO_FPS = 25;
 const FRAME_INTERVAL = 1000 / VIDEO_FPS;
@@ -159,6 +165,7 @@ function initChromaKeyGL() {
     chromaKeyCanvas.height = canvas_video.height;
     
     console.log('初始化绿幕抠图 WebGL, 画布尺寸:', chromaKeyCanvas.width, 'x', chromaKeyCanvas.height);
+    console.log('绿幕抠图参数:', CONFIG.chromaKey);
     
     chromaKeyGl = chromaKeyCanvas.getContext('webgl2', { 
         antialias: false, 
@@ -274,10 +281,26 @@ function processChromaKey(foregroundSource) {
     chromaKeyGl.texImage2D(chromaKeyGl.TEXTURE_2D, 0, chromaKeyGl.RGBA, chromaKeyGl.RGBA, chromaKeyGl.UNSIGNED_BYTE, foregroundSource);
     
     chromaKeyGl.uniform1i(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_foreground'), 0);
-    chromaKeyGl.uniform3f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_keyColor'), 0.0, 1.0, 0.0);
-    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_similarity'), 0.4);
-    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_smoothness'), 0.1);
-    chromaKeyGl.uniform1f(chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_spill'), 0.5);
+    
+    // 使用 CONFIG 中的绿幕参数
+    chromaKeyGl.uniform3f(
+        chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_keyColor'), 
+        CONFIG.chromaKey.keyColor.r, 
+        CONFIG.chromaKey.keyColor.g, 
+        CONFIG.chromaKey.keyColor.b
+    );
+    chromaKeyGl.uniform1f(
+        chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_similarity'), 
+        CONFIG.chromaKey.similarity
+    );
+    chromaKeyGl.uniform1f(
+        chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_smoothness'), 
+        CONFIG.chromaKey.smoothness
+    );
+    chromaKeyGl.uniform1f(
+        chromaKeyGl.getUniformLocation(chromaKeyProgram, 'u_spill'), 
+        CONFIG.chromaKey.spill
+    );
     
     chromaKeyGl.drawArrays(chromaKeyGl.TRIANGLE_STRIP, 0, 4);
     
@@ -326,18 +349,18 @@ const ctx_video = canvas_video.getContext('2d', {
     willReadFrequently: false 
 });
 
-// 缩放到128x128
+// 缩放到model_size
 const resizedCanvas = document.createElement('canvas');
 // const resizedCtx = resizedCanvas.getContext('2d', { willReadFrequently: true });
 const resizedCtx = resizedCanvas.getContext('2d', { 
     alpha: true,
     willReadFrequently: true 
 });
-resizedCanvas.width = 128;
-resizedCanvas.height = 128;
+resizedCanvas.width = model_size;
+resizedCanvas.height = model_size;
 
 // 创建一个像素缓冲区来存储读取的像素数据
-const pixels_fbo = new Uint8Array(128 * 128 * 4);
+const pixels_fbo = new Uint8Array(model_size * model_size * 4);
 
 // 预创建离屏 canvas，用于锁定当前视频帧，避免处理过程中视频继续播放导致不同步
 const lockedFrameCanvas = document.createElement('canvas');
@@ -403,10 +426,14 @@ async function loadCombinedData() {
         console.log("Module._processJson");
         console.log(jsonString);
         console.log(lengthBytes);
-        Module._processJson(stringPointer);
+        const version_valid = Module._processJson(stringPointer);
 
         // 释放内存
         Module._free(stringPointer);
+
+        if (version_valid == 0) {
+            alert("DH_live前端版本不对，请检查")
+        }
 
         // 提取 jsonData
         dataSets = videoProcessor.combinedData.json_data;
@@ -471,7 +498,7 @@ async function init_gl() {
                 }
                 else if (a_texture.y < 209.0f) {
                     vec4 vert_new = gProjection * vec4(tmp_Position.x, tmp_Position.y, tmp_Position.z, 1.0);
-                    v_bias = vert_new.xy - (vertBuffer[int(a_texture.y)].xy / 128.0 * 2.0 - 1.0);
+                    v_bias = vert_new.xy - (vertBuffer[int(a_texture.y)].xy / 184.0 * 2.0 - 1.0);
                 }
                 gl_Position = gProjection * vec4(tmp_Position.xyz, 1.0);
                 v_texture = a_texture;
@@ -585,40 +612,40 @@ function cerateOrthoMatrix()
 
 // 定义正交投影参数
 const left = 0;
-const right = 128;
+const right = model_size;
 const bottom = 0;
-const top = 128;
+const top = model_size;
 const near = 1000;
 const far = -1000;
 
 // 计算各轴跨度
-const rl = right - left;    // 128
-const tb = top - bottom;    // 128
-const fn = far - near;      // -2000
+const rl = right - left;
+const tb = top - bottom;
+const fn = far - near;
 
 // 列主序填充正交投影矩阵
 // 第一列 (x)
-orthoMatrix[0] = 2 / rl;    // 2/128 = 0.015625
+orthoMatrix[0] = 2 / rl;
 orthoMatrix[1] = 0;
 orthoMatrix[2] = 0;
 orthoMatrix[3] = 0;
 
 // 第二列 (y)
 orthoMatrix[4] = 0;
-orthoMatrix[5] = 2 / tb;    // 2/128 = 0.015625
+orthoMatrix[5] = 2 / tb;
 orthoMatrix[6] = 0;
 orthoMatrix[7] = 0;
 
 // 第三列 (z)
 orthoMatrix[8] = 0;
 orthoMatrix[9] = 0;
-orthoMatrix[10] = -2 / fn;  // -2/-2000 = 0.001
+orthoMatrix[10] = -2 / fn;
 orthoMatrix[11] = 0;
 
 // 第四列 (平移)
-orthoMatrix[12] = -(right + left) / rl;  // -128/128 = -1
-orthoMatrix[13] = -(top + bottom) / tb;  // -128/128 = -1
-orthoMatrix[14] = -(far + near) / fn;    // -(-1000+1000)/-2000 = 0
+orthoMatrix[12] = -(right + left) / rl;
+orthoMatrix[13] = -(top + bottom) / tb;
+orthoMatrix[14] = -(far + near) / fn;
 orthoMatrix[15] = 1;
 return orthoMatrix;
 }
@@ -725,7 +752,7 @@ async function processVideoFrames() {
 }
 
 async function initMemory() {
-    const imageDataSize = 128 * 128 * 4; // RGBA
+    const imageDataSize = model_size * model_size * 4; // RGBA
     imageDataPtr = Module._malloc(imageDataSize);
     imageDataGlPtr = Module._malloc(imageDataSize);
     bsPtr = Module._malloc(12 * 4); // 12 floats for blend shape
@@ -749,18 +776,18 @@ async function processDataSet(currentDataSetIndex) {
 
     render(matrix, subPoints, bsArray);
     // console.log("bsArray", bsArray);
-    resizedCtx.clearRect(0, 0, 128, 128);
-    resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, 128, 128);
+    resizedCtx.clearRect(0, 0, model_size, model_size);
+    resizedCtx.drawImage(canvas_video, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1], 0, 0, model_size, model_size);
 
-    const imageData = resizedCtx.getImageData(0, 0, 128, 128);
+    const imageData = resizedCtx.getImageData(0, 0, model_size, model_size);
     Module.HEAPU8.set(imageData.data, imageDataPtr);
 
     Module.HEAPU8.set(pixels_fbo, imageDataGlPtr);
 
-    Module._processImage(imageDataPtr, 128, 128, imageDataGlPtr, 128, 128);
+    Module._processImage(imageDataPtr, model_size, model_size, imageDataGlPtr, currentDataSetIndex);
     const result = Module.HEAPU8.subarray(imageDataPtr, imageDataPtr + imageData.data.length);
     imageData.data.set(result);
 
     resizedCtx.putImageData(imageData, 0, 0);
-    ctx_video.drawImage(resizedCanvas, 0, 0, 128, 128, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+    ctx_video.drawImage(resizedCanvas, 0, 0, model_size, model_size, rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
 }

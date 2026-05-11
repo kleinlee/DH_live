@@ -2,7 +2,7 @@ import subprocess
 import tqdm
 import numpy as np
 import cv2
-import sys
+import argparse
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 屏蔽 INFO 和 WARNING
 os.environ['GLOG_minloglevel'] = '2'      # 屏蔽 glog 日志
@@ -326,7 +326,7 @@ def prepare_video(
 
 
 
-def data_preparation_mini(input_video, video_dir_path,  matting = False, resize_option = False, reverse_option = True):
+def data_preparation_mini(input_video, video_dir_path, matting = False, resize_option = False, reverse_option = True):
     # 检测系统环境是否有ffmpeg
     if not shutil.which("ffmpeg"):
         raise EnvironmentError("FFmpeg未安装或不在PATH中，请安装ffmpeg并设置为环境变量")
@@ -352,19 +352,33 @@ def data_preparation_mini(input_video, video_dir_path,  matting = False, resize_
     }
     return result
 
+
 def main():
-    # 检查命令行参数的数量
-    if len(sys.argv) != 3:
-        print("Usage: python data_preparation_mini.py <静默视频> <输出文件夹位置>")
-        sys.exit(1)  # 参数数量不正确时退出程序
+    parser = argparse.ArgumentParser(description='视频人脸关键点提取工具')
+    parser.add_argument('input_video', type=str, help='输入视频文件路径')
+    parser.add_argument('output_dir', type=str, help='输出文件夹位置')
+    parser.add_argument('--matting', action='store_true',
+                        help='启用抠图功能（默认：禁用）')
+    parser.add_argument('--resize', action='store_true',
+                        help='启用视频缩放功能（默认：禁用）')
 
-    # 获取video_name参数
-    video = sys.argv[1]
-    video_dir_path = sys.argv[2]
-    print(f"Video dir path is set to: {video_dir_path}")
-    data_preparation_mini(video, video_dir_path, matting = True)
-    print("Done!")
+    # 解析参数
+    args = parser.parse_args()
 
+    print(f"输入视频: {args.input_video}")
+    print(f"输出目录: {args.output_dir}")
+    print(f"抠图功能: {'启用' if args.matting else '禁用'}")
+    print(f"缩放功能: {'启用' if args.resize else '禁用'}")
+
+    # 调用处理函数
+    data_preparation_mini(
+        args.input_video,
+        args.output_dir,
+        matting=args.matting,
+        resize_option=args.resize,
+        reverse_option=True  # 反向帧生成默认启用
+    )
+    print("处理完成!")
 
 if __name__ == "__main__":
     main()

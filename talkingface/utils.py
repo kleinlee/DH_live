@@ -75,12 +75,19 @@ def crop_face(keypoints, is_train = False, size = [512, 512]):
     y_max = min(size[0], y_max)
     return [x_min, y_min, x_max, y_max]
 
-def crop_mouth(pts_array_origin, img_w, img_h, is_train = False):
-    center_x = np.mean(pts_array_origin[INDEX_LIPS_OUTER, 0])
-    center_y = np.mean(pts_array_origin[INDEX_LIPS_OUTER, 1])
-    x_min, y_min, x_max, y_max = np.min(pts_array_origin[INDEX_FACE_OVAL[2:-2], 0]), np.min(
+def crop_mouth(pts_array_origin, img_w, img_h, is_train = False, oval = True):
+    if oval:
+        center_x = np.mean(pts_array_origin[INDEX_LIPS_OUTER, 0])
+        center_y = np.mean(pts_array_origin[INDEX_LIPS_OUTER, 1])
+        x_min, y_min, x_max, y_max = np.min(pts_array_origin[INDEX_FACE_OVAL[2:-2], 0]), np.min(
         pts_array_origin[INDEX_FACE_OVAL[2:-2], 1]), np.max(
         pts_array_origin[INDEX_FACE_OVAL[2:-2], 0]), np.max(pts_array_origin[INDEX_FACE_OVAL[2:-2], 1])
+    else:
+        center_x = np.mean(pts_array_origin[INDEX_LIPS_INNER, 0])
+        center_y = np.mean(pts_array_origin[INDEX_LIPS_INNER, 1])
+        x_min, y_min, x_max, y_max = np.min(pts_array_origin[INDEX_LIPS_INNER, 0]), np.min(
+            pts_array_origin[INDEX_LIPS_INNER, 1]), np.max(
+            pts_array_origin[INDEX_LIPS_INNER, 0]), np.max(pts_array_origin[INDEX_LIPS_INNER, 1])
     x_min = max(0, x_min)
     y_min = max(0, y_min)
     x_max = min(x_max, img_w)
@@ -92,8 +99,8 @@ def crop_mouth(pts_array_origin, img_w, img_h, is_train = False):
         h_offset = random.randint(-h_offset, h_offset)
         center_y = center_y + h_offset
 
-    x_min, y_min, x_max, y_max = int(center_x - new_size), int(center_y - new_size*0.89), int(
-        center_x + new_size), int(center_y + new_size*1.11)
+    x_min, y_min, x_max, y_max = int(center_x - new_size), int(center_y - new_size*0.9), int(
+        center_x + new_size), int(center_y + new_size*1.1)
 
     x_min = max(0, x_min)
     y_min = max(0, y_min)

@@ -21,7 +21,7 @@ def get_image(A_path, crop_coords, input_type, resize= (256, 256)):
         img_output = A_path[y_min:y_max, x_min:x_max, :]
         img_output = cv2.resize(img_output, resize)
         return img_output
-def generate_input(img, keypoints, is_train = False, mode=["mouth_bias"]):
+def generate_input(img, keypoints, is_train = False):
     # 根据关键点决定正方形裁剪区域
     crop_coords = crop_mouth(keypoints, img.shape[1], img.shape[0], is_train=is_train)
     target_keypoints = get_image(keypoints[:,:2], crop_coords, input_type='mediapipe', resize = (model_size, model_size))
@@ -32,6 +32,9 @@ def generate_input(img, keypoints, is_train = False, mode=["mouth_bias"]):
 
     source_face_egde = draw_mouth_maps(source_keypoints, im_edges = source_img)
     return source_img,target_img,crop_coords
+
+skin_map = np.zeros([model_size, model_size, 3], dtype=np.uint8)
+skin_map[:,:,:3] = [194, 150, 124]
 
 def generate_ref(img, keypoints, is_train=False, teeth = False):
     crop_coords = crop_mouth(keypoints, img.shape[1], img.shape[0], is_train=is_train)
@@ -45,7 +48,7 @@ def generate_ref(img, keypoints, is_train=False, teeth = False):
         cv2.fillPoly(teeth_mask, [pts], color=(1, 1, 1))
         # cv2.imshow("s", teeth_mask*255)
         # cv2.waitKey(-1)
-        ref_img = ref_img * teeth_mask
+        ref_img = ref_img * teeth_mask + skin_map * (1 - teeth_mask)
     ref_face_edge = draw_mouth_maps(ref_keypoints, size = (model_size, model_size))
     ref_img = np.concatenate([ref_img, ref_face_edge[:,:,:1]], axis=2)
     return ref_img
@@ -155,7 +158,7 @@ class Few_Shot_Dataset(data.Dataset):
         # target_img = cv2.convertScaleAbs(target_img, alpha=self.alpha, beta=self.beta)
         ref_face_edge = np.zeros_like(target_img)
         target_keypoints = self.driving_keypoints[video_index][current_clip]
-        source_img, target_img,crop_coords = generate_input(target_img, target_keypoints, self.is_train, mode="mouth")
+        source_img, target_img,crop_coords = generate_input(target_img, target_keypoints, self.is_train)
 
 
         [x_min, y_min, x_max, y_max] = self.driven_teeth_rect[video_index][current_clip]
