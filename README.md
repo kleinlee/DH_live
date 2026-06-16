@@ -1,6 +1,33 @@
 
 
 <div align="center">
+
+<a href="https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=DH_live">
+  <img src="atlas-cloud-logo.png" height="48" alt="Atlas Cloud" />
+</a>
+
+**AI 推理加速，由 [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=DH_live) 提供支持**
+
+DH_live 实时对话模块（VAD-ASR-LLM-TTS-数字人全流程）中的 LLM 推理，推荐使用 [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=DH_live) 统一 API。Atlas Cloud 兼容 OpenAI SDK，支持 DeepSeek-V4、Qwen、Claude 等主流大模型，开箱即用，无缝替换现有 LLM 配置。
+
+```python
+# web_demo/voiceapi/llm.py — 替换为 Atlas Cloud
+from openai import OpenAI
+
+base_url = "https://api.atlascloud.ai/v1"
+api_key = "YOUR_ATLAS_CLOUD_API_KEY"   # 在 atlascloud.ai 获取
+model_name = "deepseek-ai/deepseek-v4-pro"
+
+llm_client = OpenAI(base_url=base_url, api_key=api_key)
+```
+
+> [完整模型列表 →](https://www.atlascloud.ai/models)
+
+---
+
+</div>
+
+<div align="center">
 <img src="preview/web.jpg" height="240" />
 
 # DH_live (mini)
