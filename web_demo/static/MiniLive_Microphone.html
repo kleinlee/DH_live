@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, user-scalable=0"/>
+    <link rel="icon" href="common/favicon.ico" type="image/x-icon">
+    <title>MiniLive — Live Microphone</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden; /* 防止滚动条出现 */
+        }
+
+        video, canvas {
+            border: 2px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #background_video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            z-index: 0;
+        }
+
+        #canvas_video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            z-index: 1;
+        }
+
+        #canvas_gl {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 184px;
+            height: 184px;
+        }
+
+
+      #screen {
+        position: absolute;
+        bottom: -1000;
+        right: -1000;
+        width: 1px;
+        height: 1px;
+      }
+
+      #screen2 {
+            width: 100%;
+            height: 100%;
+            position: absolute; /* Position the iframe absolutely */
+            top: 0;
+            left: 0;
+            border: none;
+            z-index: 5; /* Ensure iframe is above other elements */
+        }
+        /* 居中显示“请点击开始” */
+        #startMessage {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: -2;
+        }
+        #canvasEl {
+            position: absolute;
+            left: -9999px;  /* 移出可视区域 */
+            top: -9999px;
+            /* 保持canvas正常尺寸 */
+            width: 300px;
+            height: 150px;
+        }
+    </style>
+
+  </head>
+  <body>
+    <figure style="overflow:visible;" id="loadingSpinner">
+        <strong>MatesX: loading...</strong>
+    </figure>
+    <canvas id="canvasEl"></canvas>
+    
+    <video id="background_video" src="background/bg.mp4" autoplay loop muted playsinline></video>
+    
+    <!-- Visible canvas elements -->
+    <canvas id="canvas_video"></canvas>
+
+    <canvas id="canvas_gl" width="184" height="184"></canvas>
+
+    <div id="screen"></div>
+    <div id="screen2" style="pointer-events:none;display:none"></div>
+    <!-- 添加“请点击开始”的元素 -->
+    <div id="startMessage">Loading avatar…</div>
+    <script src="js/pako.min.js"></script>
+    <script src="js/DHLiveMini.js"></script>
+    <script src="js/MiniMateLoader.js"></script>
+    <script src="js/MiniLive2.js"></script>
+  <script>
+(() => {
+'use strict';
+const panel = document.createElement('section');
+panel.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:20;background:#fff;padding:16px;border-radius:12px;font:16px system-ui;box-shadow:0 2px 12px #777';
+panel.innerHTML = `<b>Live microphone → avatar</b><p>Use headphones if you enable voice playback. Keep this tab visible.</p><button id="micStart">Start microphone</button> <button id="micStop" disabled>Stop</button> <label><input id="micMonitor" type="checkbox"> Play my voice (delayed)</label> <label>Chunk size <select id="micChunk"><option value="500">500 ms</option><option value="1000">1000 ms</option><option value="250">250 ms (experimental)</option></select></label><p><label>Noise rejection: <input id="micGate" type="range" min="-60" max="-15" value="-35" step="1"> <output id="micGateValue">−35 dB</output></label> ← More sensitive · Less sensitive →</p><p>Move right until background sounds stop triggering the mouth. Move left if soft speech is missed.</p><p id="micStatus" role="status">Wait for the avatar to load, then start.</p>`;
+document.body.appendChild(panel);
+const start = document.getElementById('micStart'), stop = document.getElementById('micStop'), status = document.getElementById('micStatus'), monitor = document.getElementById('micMonitor'), chunk = document.getElementById('micChunk');
+const gate = document.getElementById('micGate'), gateValue = document.getElementById('micGateValue');
+let session = null;
+function wav(pcm) {
+  const bytes = new Uint8Array(44 + pcm.length * 2), v = new DataView(bytes.buffer);
+  const str = (offset, s) => [...s].forEach((c,i) => v.setUint8(offset+i,c.charCodeAt(0)));
+  str(0,'RIFF'); v.setUint32(4,36+pcm.length*2,true); str(8,'WAVE'); str(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,16000,true); v.setUint32(28,32000,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  str(36,'data'); v.setUint32(40,pcm.length*2,true);
+  pcm.forEach((sample,i) => v.setInt16(44+i*2,sample,true)); return bytes;
+}
+function feed(pcm) {
+  const bytes = wav(pcm), ptr = Module._malloc(bytes.length);
+  if (!ptr) throw new Error('Avatar audio allocation failed.');
+  try { Module.HEAPU8.set(bytes,ptr); Module._setAudioBuffer(ptr,bytes.length); }
+  finally { Module._free(ptr); }
+}
+async function halt(message = 'Stopped. Microphone released.') {
+  const s = session; session = null;
+  if (s) {
+    s.stream?.getTracks().forEach(t => t.stop());
+    if(s.node) { s.node.port.onmessage = null; s.node.disconnect(); }
+    s.input?.disconnect();
+    if(s.source) { s.source.onended = null; try { s.source.stop(); } catch {} }
+    s.queue.length = 0;
+    if(s.ctx && s.ctx.state !== 'closed') await s.ctx.close();
+    if(typeof Module !== 'undefined' && typeof Module._clearAudio === 'function') Module._clearAudio();
+  }
+  start.disabled = false; stop.disabled = true; chunk.disabled = false; status.textContent = message;
+}
+function play(s) {
+  if(session !== s || s.source || !s.queue.length) return;
+  try {
+    const pcm = s.queue.shift();
+    const buffer = s.ctx.createBuffer(1,pcm.length,16000);
+    const floats = buffer.getChannelData(0);
+    pcm.forEach((value,i) => floats[i] = value / 32768);
+    const source = s.ctx.createBufferSource(); source.buffer = buffer; source.connect(s.gain);
+    feed(pcm); s.source = source;
+    source.onended = () => { if(session !== s) return; s.source = null; play(s); };
+    source.start();
+    status.textContent = `Microphone active · ${chunk.value} ms chunks · ${s.dropped} old chunks dropped. Delay and lip quality need local testing.`;
+  } catch(error) { void halt('Audio error: ' + error.message); }
+}
+start.onclick = async () => {
+  if(session) return;
+  if(typeof Module === 'undefined' || !Module.HEAPU8 || typeof Module._setAudioBuffer !== 'function' || document.getElementById('startMessage').style.display !== 'none') {
+    status.textContent = 'Avatar is not ready. Wait for loading; if it stays blank, check browser F12 → Console.'; return;
+  }
+  const s = {queue:[],dropped:0}; session = s; start.disabled = true; stop.disabled = false; chunk.disabled = true;
+  status.textContent = 'Requesting microphone permission…';
+  try {
+    if(!navigator.mediaDevices?.getUserMedia) throw new Error('Open this page using http://localhost:8888, in Chrome or Edge.');
+    s.ctx = new AudioContext({sampleRate:16000}); await s.ctx.resume();
+    if(session !== s) return;
+    if(s.ctx.sampleRate !== 16000) throw new Error('This browser did not provide 16 kHz audio. Try Chrome or Edge.');
+    const stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:false},video:false});
+    if(session !== s) { stream.getTracks().forEach(t=>t.stop()); return; }
+    s.stream = stream;
+    stream.getAudioTracks()[0].onended = () => { if(session === s) void halt('Microphone disconnected.'); };
+    const code = `class MicChunks extends AudioWorkletProcessor {
+      constructor(options) { super(); this.size=options.processorOptions.size; this.data=new Int16Array(this.size); this.offset=0;
+        this.threshold=Math.pow(10,options.processorOptions.gateDb/20); this.hold=0; this.gain=0;
+        this.port.onmessage=e=>{ if(Number.isFinite(e.data.gateDb)) this.threshold=Math.pow(10,e.data.gateDb/20); };
+      }
+      process(inputs, outputs) {
+        for(const channel of outputs[0] || []) channel.fill(0);
+        const channels=inputs[0]; if(!channels || !channels.length) return true;
+        let energy=0;
+        for(let i=0;i<channels[0].length;i++) { let x=0; for(const c of channels) x+=c[i]; x/=channels.length; energy+=x*x; }
+        const rms=Math.sqrt(energy/channels[0].length);
+        // Short hold preserves word endings; smooth gain changes avoid clicks.
+        const threshold=this.hold>0 ? this.threshold*0.7 : this.threshold;
+        if(rms>=threshold) this.hold=2560;
+        for(let i=0;i<channels[0].length;i++) {
+          let value=0; for(const channel of channels) value+=channel[i]; value/=channels.length;
+          const open=this.hold>0; this.hold=Math.max(0,this.hold-1);
+          this.gain=open ? Math.min(1,this.gain+1/80) : Math.max(0,this.gain-1/320);
+          value*=this.gain;
+          value=Math.max(-1,Math.min(1,value)); this.data[this.offset++]=Math.round(value*(value<0?32768:32767));
+          if(this.offset===this.size) { this.port.postMessage(this.data,[this.data.buffer]); this.data=new Int16Array(this.size); this.offset=0; }
+        } return true;
+      }
+    } registerProcessor('mic-chunks',MicChunks);`;
+    const url = URL.createObjectURL(new Blob([code],{type:'application/javascript'}));
+    try { await s.ctx.audioWorklet.addModule(url); } finally { URL.revokeObjectURL(url); }
+    if(session !== s) return;
+    s.gain = s.ctx.createGain(); s.gain.gain.value = monitor.checked ? 1 : 0; s.gain.connect(s.ctx.destination);
+    s.node = new AudioWorkletNode(s.ctx,'mic-chunks',{processorOptions:{size:Number(chunk.value)*16,gateDb:Number(gate.value)}});
+    s.node.port.onmessage = event => {
+      if(session !== s) return;
+      // Keep at most one waiting chunk; never build an unbounded latency backlog.
+      if(s.queue.length) { s.queue.shift(); s.dropped++; }
+      s.queue.push(event.data); play(s);
+    };
+    s.input = s.ctx.createMediaStreamSource(stream); s.input.connect(s.node); s.node.connect(s.ctx.destination);
+    status.textContent = 'Listening… speak into your microphone.';
+  } catch(error) { if(session === s) await halt(error.name + ': ' + error.message); }
+};
+stop.onclick = () => void halt();
+gate.oninput = () => { gateValue.textContent = gate.value + ' dB'; session?.node?.port.postMessage({gateDb:Number(gate.value)}); };
+monitor.onchange = () => { if(session?.gain) session.gain.gain.value = monitor.checked ? 1 : 0; };
+document.addEventListener('visibilitychange', () => { if(document.hidden && session) void halt('Stopped because the tab was hidden. Return and press Start.'); });
+window.addEventListener('pagehide', () => { session?.stream?.getTracks().forEach(t=>t.stop()); });
+})();
+</script>
+
+</body>
+</html>
